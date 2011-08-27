@@ -1,0 +1,36 @@
+cancer(): proc
+	is_it (n:int, source:reference byte[]):int
+		i:int;
+		
+		{
+			n=n-1;
+			i=0;
+			while ( i < (n/2 + 1) )
+			{
+				if(source[i]!=source[n-i]) {
+          writeChar(source[i]);
+          writeChar(source[n-i]);
+          writeString("The incarcinity was at position ");
+          writeInteger(i);
+          writeString(".\n");
+					return 1;
+        }
+				i=i+1;
+			}
+			return 0;
+		}
+	
+	n:int;
+	source:byte[31];
+	
+	{
+		writeString("Give a string with maximum length 30: ");
+		readString(30, source);
+		n=0;
+		while (source[n]!='\0')
+			n=n+1;
+		if (is_it(n, source)==1)	--εκτύπωση κατάλληλου μηνύματος
+			writeString("\nIs not cancern...");
+		else
+			writeString("\nIs cancern...");
+	}

@@ -1,0 +1,89 @@
+BlockName 0 , Id = 1
+Starts at @1 and ends at @1
+1:	unit , gorosort, - , -
+
+BlockName 1 , Id = 2
+Starts at @2 and ends at @3
+2:	par  , $1 , RET , -
+3:	call , - , - , readInteger
+
+BlockName 2 , Id = 4
+Starts at @4 and ends at @5
+4:	:=   , $1, - , t
+5:	:=   , 1, - , case
+
+BlockName 3 , Id = 6
+Starts at @6 and ends at @6
+6:	<=   , case, t, (7, 35)
+
+BlockName 4 , Id = 7
+Starts at @7 and ends at @8
+7:	par  , $2 , RET , -
+8:	call , - , - , readInteger
+
+BlockName 5 , Id = 9
+Starts at @9 and ends at @11
+9:	:=   , $2, - , n
+10:	:=   , 0, - , inPlace
+11:	:=   , 1, - , i
+
+BlockName 6 , Id = 12
+Starts at @12 and ends at @12
+12:	<=   , i, n, (13, 21)
+
+BlockName 7 , Id = 13
+Starts at @13 and ends at @14
+13:	par  , $3 , RET , -
+14:	call , - , - , readInteger
+
+BlockName 8 , Id = 15
+Starts at @15 and ends at @15
+15:	==   , i, $3, (16, 18)
+
+BlockName 9 , Id = 16
+Starts at @16 and ends at @17
+16:	+    , inPlace, 1, $4
+17:	:=   , $4, - , inPlace
+
+BlockName 10 , Id = 18
+Starts at @18 and ends at @20
+18:	+    , i, 1, $5
+19:	:=   , $5, - , i
+20:	jump , - , - , 12
+
+BlockName 11 , Id = 21
+Starts at @21 and ends at @22
+21:	par  , "Case #" , R , -
+22:	call , - , - , writeString
+
+BlockName 12 , Id = 23
+Starts at @23 and ends at @24
+23:	par  , case , V , -
+24:	call , - , - , writeInteger
+
+BlockName 13 , Id = 25
+Starts at @25 and ends at @26
+25:	par  , ": " , R , -
+26:	call , - , - , writeString
+
+BlockName 14 , Id = 27
+Starts at @27 and ends at @29
+27:	-    , n, inPlace, $6
+28:	par  , $6 , V , -
+29:	call , - , - , writeInteger
+
+BlockName 15 , Id = 30
+Starts at @30 and ends at @31
+30:	par  , ".000000\n" , R , -
+31:	call , - , - , writeString
+
+BlockName 16 , Id = 32
+Starts at @32 and ends at @34
+32:	+    , case, 1, $7
+33:	:=   , $7, - , case
+34:	jump , - , - , 6
+
+BlockName 17 , Id = 35
+Starts at @35 and ends at @35
+35:	endu , gorosort, - , -
+

@@ -1,0 +1,12 @@
+C:\Users\George\Documents\Visual Studio 2010\Projects\Compilers2011\FParsedLanguageStarter1\obj\x86\Release\ResolveAssemblyReference.cache
+C:\Users\George\Documents\Visual Studio 2010\Projects\Compilers2011\FParsedLanguageStarter1\bin\Release\Language.XML
+C:\Users\George\Documents\Visual Studio 2010\Projects\Compilers2011\FParsedLanguageStarter1\bin\Release\Language.exe
+C:\Users\George\Documents\Visual Studio 2010\Projects\Compilers2011\FParsedLanguageStarter1\bin\Release\Language.pdb
+C:\Users\George\Documents\Visual Studio 2010\Projects\Compilers2011\FParsedLanguageStarter1\bin\Release\FSharp.PowerPack.dll
+C:\Users\George\Documents\Visual Studio 2010\Projects\Compilers2011\FParsedLanguageStarter1\bin\Release\FSharp.PowerPack.pdb
+C:\Users\George\Documents\Visual Studio 2010\Projects\Compilers2011\FParsedLanguageStarter1\bin\Release\FSharp.PowerPack.xml
+C:\Users\George\Documents\Visual Studio 2010\Projects\Compilers2011\FParsedLanguageStarter1\obj\x86\Release\Language.exe
+C:\Users\George\Documents\Visual Studio 2010\Projects\Compilers2011\FParsedLanguageStarter1\obj\x86\Release\Language.pdb
+C:\Users\George\documents\visual studio 2010\Projects\Compilers2011\FParsedLanguageStarter1\bin\Release\FSharp.PowerPack.Compatibility.dll
+C:\Users\George\documents\visual studio 2010\Projects\Compilers2011\FParsedLanguageStarter1\bin\Release\FSharp.PowerPack.Compatibility.pdb
+C:\Users\George\documents\visual studio 2010\Projects\Compilers2011\FParsedLanguageStarter1\bin\Release\FSharp.PowerPack.Compatibility.xml

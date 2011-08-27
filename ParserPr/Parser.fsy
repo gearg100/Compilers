@@ -1,0 +1,135 @@
+﻿%{
+
+
+%}
+// The start token becomes a parser function in the compiled code:
+%start start
+
+// These are the terminal tokens of the grammar along with the types of
+// the data carried by each token:
+%token <string> ERROR
+%token <char> BYTE
+%token <int> INT
+%token <string * string> STRING
+%token <string> ID
+%token T_BYTE T_ELSE T_FALSE T_IF T_INT T_PROC T_REF T_RETURN T_WHILE T_TRUE T_EOF
+%token LPAREN RPAREN LSBR RSBR LCBR RCBR COMMA COLON SEMICOLON ASSIGN
+%token EQ NE LT LE GT GE PLUS MINUS ASTER SLASH MOD NOT AND OR
+
+
+// This is the type of the data produced by a successful reduction of the 'start'
+// symbol:
+%type < unit > start
+%type < unit > func_def
+%type < unit > fpar_list
+%type < unit > fpar_def
+%type < unit > data_type
+%type < unit > type
+%type < unit > r_type
+%type < unit > local_def
+%type < unit > var_def
+%type < unit > stmt
+%type < unit > compound_stmt
+%type < unit > func_call
+%type < unit > expr_list
+%type < unit > expr
+%type < unit > l_value
+%type < unit > cond
+
+%left OR
+%left AND
+%nonassoc EQ NE GT GE LT LE
+%left PLUS MINUS
+%left ASTER SLASH MOD
+%left NOT NEG POS
+
+%%
+
+// These are the rules of the grammar along with the F# code of the 
+// actions executed as rules are reduced.  In this case the actions 
+// produce data using F# data construction terms.
+
+start: func_def { () }
+
+func_def: ID LPAREN RPAREN COLON r_type compound_stmt { () }
+         |ID LPAREN RPAREN COLON r_type local_def_list compound_stmt { () }
+         |ID LPAREN fpar_list RPAREN COLON r_type compound_stmt { () }
+         |ID LPAREN fpar_list RPAREN COLON r_type local_def_list compound_stmt { () }
+
+fpar_list: fpar_def { () } 
+          |fpar_list COMMA fpar_def { () }
+
+fpar_def: ID COLON type { () }
+         |ID COLON T_REF type { () }
+
+data_type: T_INT { () }
+          |T_BYTE { () }
+
+type: data_type { () }
+     |data_type LSBR RSBR { () }
+
+r_type: data_type { () }
+       |T_PROC { () }
+
+local_def: func_def { () }
+          |var_def { () }
+
+local_def_list: local_def { () }
+               |local_def local_def_list { () }
+
+var_def: ID COLON data_type SEMICOLON { () }
+        |ID COLON data_type LSBR T_INT RSBR SEMICOLON { () }
+
+stmt: simple_stmt { () }
+
+simple_stmt: SEMICOLON { () }
+            |l_value ASSIGN expr SEMICOLON { () }
+            |compound_stmt { () }
+            |func_call SEMICOLON { () }
+            |T_IF LPAREN cond RPAREN simple_stmt { () }
+			|T_IF LPAREN cond RPAREN simple_stmt T_ELSE simple_stmt { () }
+            |T_WHILE LPAREN cond RPAREN stmt { () }
+            |T_RETURN SEMICOLON { () }
+            |T_RETURN expr SEMICOLON { () }
+
+stmt_list: stmt { () }
+          |stmt_list stmt { () }
+
+compound_stmt: LCBR RCBR { () }
+              |LCBR stmt_list RCBR { () }
+
+func_call: ID LPAREN RPAREN { () }
+          |ID LPAREN expr_list RPAREN { () }
+
+expr_list: expr { () }
+          |expr_list COMMA expr { () }
+
+expr: INT { () }
+     |BYTE { () }
+     |l_value { () }
+     |LPAREN expr RPAREN { () }
+     |func_call { () }
+     |PLUS expr %prec POS { () }
+     |MINUS expr %prec NEG { () }
+     |expr PLUS expr { () }
+     |expr MINUS expr { () }
+     |expr ASTER expr { () }
+     |expr SLASH expr { () }
+     |expr MOD expr { () }
+
+l_value: ID  { () }
+        |ID LSBR expr RSBR { () }
+        |STRING { () }
+
+cond: T_TRUE { () }
+     |T_FALSE { () }
+     |LPAREN cond RPAREN { () }
+     |NOT cond { () }
+     |expr EQ expr { () }
+     |expr NE expr { () }
+     |expr LT expr { () }
+     |expr GT expr { () }
+     |expr LE expr { () }
+     |expr GE expr { () }
+     |cond AND cond { () }
+     |cond OR cond { () }

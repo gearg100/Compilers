@@ -1,0 +1,319 @@
+﻿%{
+
+open Types
+open Symbol
+open Error
+open Identifier
+open Microsoft.FSharp.Text.Lexing
+open Microsoft.FSharp.Text.Parsing
+
+exception SemanticError
+let lexeme = LexBuffer<char>.LexemeString
+let inline EHandler (ctxt: ParseErrorContext<_>) = 
+    let p=(ctxt.ParseState.InputStartPosition(1).Line,ctxt.ParseState.InputStartPosition(1).Column)
+    (error "Syntax Error at %A: Unrecognized Syntax Error\n" p )
+let parse_error_rich = None
+let inline getScopeFunction () = (!currentScope).sco_function.Value
+let inline getReturnType f = let (ENTRY_function x) = f.entry_info in x.function_result
+let inline getParameterTypeAndPassMode e = let (ENTRY_parameter p) = e.entry_info in (p.parameter_type,p.parameter_mode)
+let inline checkExprSemantics op x1 x2 (state:IParseState) txt =
+    if (op x1 x2) then x1 else let (ps,pe)=state.ResultRange
+                               error txt (ps.Line,ps.Column) (pe.Line,pe.Column)
+                               |>ignore; TYPE_none
+let inline checkCondSemantics x1 x2 (state:IParseState) txt =
+    if (x1=x2) then () else let (ps,pe)=state.ResultRange
+                            error txt (ps.Line,ps.Column) (pe.Line,pe.Column) |> ignore
+let inline checkStmtSemantics x1 x2 (state:IParseState) txt =
+    if (x1=x2) then () else let (ps,pe)=state.ResultRange
+                            error txt (ps.Line,ps.Column) (pe.Line,pe.Column) |> ignore
+let inline checkStmtSemantics2 typ (state:IParseState) =
+    let t = () |> getScopeFunction |> getReturnType
+    if (t = typ) then () else let (ps,pe)=state.ResultRange
+                              error "Semantic Error at %A -%A: \n\tType Mismatch: Return type must be %A but is %A\n" (ps.Line,ps.Column) (pe.Line,pe.Column) t typ |> ignore
+let inline checkParameters flag e p =
+    let ep=getParameterTypeAndPassMode e
+    match ep, p with
+    |(t1,p1),(t2,p2) when t1==t2 && (if p1=PASS_BY_REFERENCE then (p1=p2) else true)->flag
+    |_ ->false  
+let inline syntaxError (state:IParseState) txt typ=
+    let (ps,pe)=state.ResultRange
+    error txt (ps.Line,ps.Column) (pe.Line,pe.Column)
+    |>ignore;typ
+let setInitialPos (lexbuf:LexBuffer<char>) filename = 
+       lexbuf.EndPos <- { pos_bol = 0;
+                          pos_fname=filename; 
+                          pos_cnum=0;
+                          pos_lnum=1 }
+
+let LibraryFunctions = [
+    ("writeInteger",[("win" ,TYPE_int                 ,PASS_BY_VALUE    )],TYPE_proc);
+    ("writeByte"   ,[("wby" ,TYPE_byte                ,PASS_BY_VALUE    )],TYPE_proc);
+    ("writeChar"   ,[("wch" ,TYPE_byte                ,PASS_BY_VALUE    )],TYPE_proc);
+    ("writeString" ,[("wst" ,TYPE_array (TYPE_byte,-1),PASS_BY_REFERENCE)],TYPE_proc);
+    ("readInteger" ,[]                                                    ,TYPE_int );
+    ("readByte"    ,[]                                                    ,TYPE_byte);
+    ("readChar"    ,[]                                                    ,TYPE_byte);
+    ("readString"  ,[("rst1",TYPE_int                 ,PASS_BY_VALUE    )
+                    ;("rst2",TYPE_array (TYPE_byte,-1),PASS_BY_REFERENCE)],TYPE_proc);
+    ("extend"      ,[("ext" ,TYPE_byte                ,PASS_BY_VALUE    )],TYPE_proc);
+    ("shrink"      ,[("scr" ,TYPE_int                 ,PASS_BY_VALUE    )],TYPE_proc);
+    ("strlen"      ,[("stl" ,TYPE_array (TYPE_byte,-1),PASS_BY_REFERENCE)],TYPE_int );
+    ("strcmp"      ,[("cmp1",TYPE_array (TYPE_byte,-1),PASS_BY_REFERENCE)
+                    ;("cmp2",TYPE_array (TYPE_byte,-1),PASS_BY_REFERENCE)],TYPE_int );
+    ("strcpy"      ,[("cpyd",TYPE_array (TYPE_byte,-1),PASS_BY_REFERENCE)
+                    ;("cpys",TYPE_array (TYPE_byte,-1),PASS_BY_REFERENCE)],TYPE_proc);
+    ("strcat"      ,[("catd",TYPE_array (TYPE_byte,-1),PASS_BY_REFERENCE)
+                    ;("cats",TYPE_array (TYPE_byte,-1),PASS_BY_REFERENCE)],TYPE_proc);
+                       ]
+
+let bulkLoad (fName,parameterList,fType) = 
+    let f = newFunction (id_make fName) true
+    List.iter (fun (pName,pType,pPass) -> newParameter (id_make pName) pType pPass f true |> ignore ) parameterList
+    endFunctionHeader f fType
+
+initSymbolTable 256
+List.iter bulkLoad LibraryFunctions
+%}
+// The start token becomes a parser function in the compiled code:
+%start start
+
+// These are the terminal tokens of the grammar along with the types of
+// the data carried by each token:
+%token <byte> BYTE
+%token <int> INT
+%token <string> STRING
+%token <string> ID
+%token T_BYTE T_ELSE T_FALSE T_IF T_INT T_PROC T_REF T_RETURN T_WHILE T_TRUE T_EOF
+%token LPAREN RPAREN LSBR RSBR LCBR RCBR COMMA COLON SEMICOLON ASSIGN
+%token EQ NE LT LE GT GE PLUS MINUS ASTER SLASH MOD NOT AND OR
+
+
+// This is the type of the data produced by a successful reduction of the 'start'
+// symbol:
+%type < unit > start
+%type < unit > func_def
+%type < unit > fpar_list
+%type < unit > fpar_def
+%type < unit > func_head
+%type < typ > data_type
+%type < typ > type
+%type < typ > r_type
+%type < unit > local_def
+%type < unit > var_def
+%type < unit > stmt
+%type < unit > compound_stmt
+%type < typ > func_call
+%type < (typ*pass_mode) list > expr_list
+%type < typ > expr
+%type < typ > l_value
+%type < unit > cond
+%type < token > compop
+%type < typ*pass_mode > ref_value
+
+%left OR
+%left AND
+%nonassoc EQ NE GT GE LT LE
+%left PLUS MINUS
+%left ASTER SLASH MOD
+%left NOT NEG POS
+
+%%
+
+// These are the rules of the grammar along with the F# code of the 
+// actions executed as rules are reduced.  In this case the actions 
+// produce data using F# data construction terms.
+
+start: func_def { () }
+      |error { 
+let p=(parseState.InputStartPosition(1).Line,parseState.InputStartPosition(1).Column)
+fatal "Unrecognized Parse Error at %A\n" p}
+
+func_def: func_head func_params compound_stmt { closeScope () }
+         |func_head func_params local_def_list compound_stmt { closeScope () }
+         |func_head func_params error { 
+let (ps,pe)=parseState.ResultRange
+error "Syntax Error at %A - %A: Statements in Function declaration must be inside curly brackets\n" (ps.Line,ps.Column) (pe.Line,pe.Column)
+closeScope ()
+}
+         |func_head func_params local_def_list error {
+let (ps,pe)=parseState.ResultRange
+error "Syntax Error at %A - %A: Statements in Function body must be inside curly brackets\n" (ps.Line,ps.Column) (pe.Line,pe.Column)
+closeScope ()
+}
+
+func_head: ID { 
+Some (newFunction (id_make $1) true) |> 
+openScope
+}
+
+func_params: LPAREN RPAREN COLON r_type { endFunctionHeader (getScopeFunction()) $4 }
+            |LPAREN fpar_list RPAREN COLON r_type { endFunctionHeader (getScopeFunction()) $5 }
+
+fpar_list: fpar_def { () } 
+          |fpar_list COMMA fpar_def { () }
+
+fpar_def: ID COLON data_type { newParameter (id_make $1) $3 PASS_BY_VALUE (getScopeFunction()) true |>ignore }
+         |ID COLON T_REF type { newParameter (id_make $1) $4 PASS_BY_REFERENCE (getScopeFunction()) true |>ignore}
+
+data_type: T_INT { TYPE_int }
+          |T_BYTE { TYPE_byte }
+
+type: data_type { $1 }
+     |data_type LSBR RSBR { TYPE_array ($1,-1) }
+
+r_type: data_type { $1 }
+       |T_PROC { TYPE_proc }
+
+local_def: func_def { () }
+          |var_def { () }
+
+local_def_list: local_def { () }
+               |local_def_list local_def { () }
+
+var_def: ID COLON data_type SEMICOLON { newVariable (id_make $1) $3 false |>ignore }
+        |ID COLON data_type LSBR INT RSBR SEMICOLON { newVariable (id_make $1) (TYPE_array ($3,$5)) true |>ignore }
+        |ID COLON data_type error SEMICOLON {
+let p=(parseState.InputStartPosition(3).Line,parseState.InputStartPosition(3).Column)
+error "Syntax Error at %A: Invalid Variable Definition %s: ';' or [integer] expected\n" p $1 |>ignore}
+        |ID COLON error SEMICOLON  {
+let p=(parseState.InputStartPosition(3).Line,parseState.InputStartPosition(3).Column)
+error "Syntax Error at %A: Invalid Variable Definition %s: Invalid datatype after ':'\n" p $1 |>ignore}
+
+stmt: SEMICOLON { () }
+     |local_def { syntaxError parseState "Syntax Error at %A - %A: Cannot have declarations among statements\n" ()}
+     |l_value ASSIGN expr SEMICOLON { checkStmtSemantics $1 $3 parseState "Semantic Error at %A - %A: Type Mismatch\n" }
+     |compound_stmt { () }
+     |func_call SEMICOLON { checkStmtSemantics $1 TYPE_proc parseState "Semantic Error at %A - %A: waiting TYPE_proc, got %A\n" }
+     |T_IF LPAREN cond RPAREN stmt { () }
+     |T_IF LPAREN cond RPAREN stmt T_ELSE stmt { () }
+     |T_WHILE LPAREN cond RPAREN stmt { () }
+     |T_RETURN SEMICOLON { checkStmtSemantics2 TYPE_proc parseState }
+     |T_RETURN expr SEMICOLON { checkStmtSemantics2 $2 parseState }
+     |l_value ASSIGN error SEMICOLON { syntaxError parseState "Syntax Error at %A - %A: Invalid Assignment - Expression expected\n" ()}
+     |l_value error SEMICOLON { syntaxError parseState "Syntax Error at %A - %A: Invalid Assignment - '=' expected\n" ()}
+     |T_IF error stmt { syntaxError parseState "Syntax Error at %A - %A: Condition in parentheses expected\n" ()}
+     |T_IF error stmt T_ELSE stmt { syntaxError parseState "Syntax Error at %A - %A: Condition in parentheses expected\n" ()}
+     |T_WHILE error stmt { syntaxError parseState "Syntax Error at %A - %A: Condition in parentheses expected\n" ()}
+     |T_RETURN error SEMICOLON { syntaxError parseState "Syntax Error at %A - %A: Invalid Return Statement\n" ()}
+     |error SEMICOLON { syntaxError parseState "Syntax Error at %A - %A: Invalid Statement\n" ()}
+
+stmt_list: stmt { () }
+          |stmt_list stmt { () }
+
+compound_stmt: LCBR RCBR { () }
+              |LCBR stmt_list RCBR { () }
+              |LCBR error RCBR { syntaxError parseState "Syntax Error at %A - %A: Invalid Function body\n" ()}
+
+func_call: ID LPAREN RPAREN { 
+let p=(parseState.InputStartPosition(1).Line,parseState.InputStartPosition(1).Column)
+match lookupEntry (id_make $1) LOOKUP_ALL_SCOPES true with
+|Some e->
+    match e.entry_info with
+    |ENTRY_function f when f.function_paramlist=[] -> f.function_result
+    |ENTRY_function f ->
+         error "Semantic Error at %A: Parameter Mismatch:\n\t Expected Parameter List=%A \n\t Given empty Parameter List\n" p (List.map getParameterTypeAndPassMode f.function_paramlist)
+         |>ignore; TYPE_none
+    |_ ->
+         error "Semantic Error at %A: Given name is not a Function\n" p
+         |>ignore; TYPE_none
+|None -> error "undeclared function" |>ignore;TYPE_none
+}
+          |ID LPAREN expr_list RPAREN {
+let p=(parseState.InputStartPosition(1).Line,parseState.InputStartPosition(1).Column)
+match lookupEntry (id_make $1) LOOKUP_ALL_SCOPES true with
+|Some e->
+    match e.entry_info with
+    |ENTRY_function f when (f.function_paramlist.Length=$3.Length && List.fold2 checkParameters true f.function_paramlist (List.rev $3)) -> f.function_result
+    |ENTRY_function f -> error "Semantic Error at %A: Parameter Mismatch:\n\t Expected Parameter List = %A \n\t Actual Parameter List = %A\n" p (List.map getParameterTypeAndPassMode f.function_paramlist) $3 |>ignore; TYPE_none
+    |_ ->error "Semantic Error at %A: the given name is not  a function" |>ignore; TYPE_none
+|None -> error "undeclared function" |>ignore; TYPE_none
+}
+
+expr_list: expr   { [($1,PASS_BY_VALUE)] }
+          |ref_value { [$1] }
+          |expr_list COMMA expr { ($3,PASS_BY_VALUE)::$1 }
+          |expr_list COMMA ref_value { $3::$1 }
+
+
+expr: INT { TYPE_int }
+     |BYTE { 
+if 0<=(int $1) && (int $1)<256 then TYPE_byte 
+else let p = (parseState.InputStartPosition(1).Line,parseState.InputStartPosition(1).Column)
+     error "Semantic Error at %A: Too big for a byte\n" p 
+     |>ignore; TYPE_none}
+     
+     |l_value { $1 }
+     |LPAREN expr RPAREN { $2 }
+     |func_call { checkExprSemantics (<>) $1 TYPE_proc parseState "Semantic Error at %A -%A: void Function call\n" }
+     |PLUS expr %prec POS { $2 }
+     |MINUS expr %prec NEG { checkExprSemantics (=) $2 TYPE_int parseState "Semantic Error at %A - %A: Cannot negate anything but an Int\n" }
+     |expr MINUS expr{ checkExprSemantics (=) $1 $3 parseState "Semantic Error at %A - %A: Type Mismatch\n" }
+     |expr PLUS expr{ checkExprSemantics (=) $1 $3 parseState "Semantic Error at %A - %A: Type Mismatch\n" }
+     |expr ASTER expr{ checkExprSemantics (=) $1 $3 parseState "Semantic Error at %A - %A: Type Mismatch\n" }
+     |expr SLASH expr{ checkExprSemantics (=) $1 $3 parseState "Semantic Error at %A - %A: Type Mismatch\n" }
+     |expr MOD expr{ checkExprSemantics (=) $1 $3 parseState "Semantic Error at %A - %A: Type Mismatch\n" }
+     |error MINUS expr{ syntaxError parseState "Syntax Error at %A - %A: Invalid Expression\n" TYPE_none }
+     |error PLUS expr{ syntaxError parseState "Syntax Error at %A - %A: Invalid Expression\n" TYPE_none }
+     |error ASTER expr{ syntaxError parseState "Syntax Error at %A - %A: Invalid Expression\n" TYPE_none }
+     |error SLASH expr{ syntaxError parseState "Syntax Error at %A - %A: Invalid Expression\n" TYPE_none }
+     |error MOD expr{ syntaxError parseState "Syntax Error at %A - %A: Invalid Expression\n" TYPE_none }
+     |expr MINUS error{ syntaxError parseState "Syntax Error at %A - %A: Invalid Expression\n" TYPE_none }
+     |expr PLUS error{ syntaxError parseState "Syntax Error at %A - %A: Invalid Expression\n" TYPE_none }
+     |expr ASTER error{ syntaxError parseState "Syntax Error at %A - %A: Invalid Expression\n" TYPE_none }
+     |expr SLASH error{ syntaxError parseState "Syntax Error at %A - %A: Invalid Expression\n" TYPE_none }
+     |expr MOD error{ syntaxError parseState "Syntax Error at %A - %A: Invalid Expression\n" TYPE_none }
+
+
+ref_value: |STRING { (TYPE_array (TYPE_byte,($1).Length+1),PASS_BY_REFERENCE) }
+           |ID     { 
+let p=(parseState.InputStartPosition(1).Line,parseState.InputStartPosition(1).Column)
+match lookupEntry (id_make $1) LOOKUP_ALL_SCOPES true with
+|Some e->
+    match e.entry_info with
+    |ENTRY_variable v ->  (v.variable_type,PASS_BY_REFERENCE)
+    |ENTRY_parameter p ->  (p.parameter_type,PASS_BY_REFERENCE)
+    |_ ->
+         error "Semantic Error at %A: The give name is neither a variable nor a parameter name\n" p
+         |>ignore; TYPE_none,PASS_BY_REFERENCE
+|None -> error "undeclared variable" |> ignore; TYPE_none,PASS_BY_REFERENCE }
+
+l_value: ID  { 
+match lookupEntry (id_make $1) LOOKUP_ALL_SCOPES true with
+|Some e->
+    match e.entry_info with
+    |ENTRY_variable v when v.variable_type=TYPE_int || v.variable_type=TYPE_byte -> v.variable_type
+    |ENTRY_parameter p when p.parameter_type=TYPE_int || p.parameter_type=TYPE_byte -> p.parameter_type
+    |_ ->error "l_value type mismatch: neither int nor byte\n" |>ignore; TYPE_none
+|None -> error "undeclared variable" |>ignore; TYPE_none
+
+}
+        |ID LSBR expr RSBR { 
+
+match lookupEntry (id_make $1) LOOKUP_ALL_SCOPES true with
+|Some e->
+    match e.entry_info with
+    |ENTRY_variable a -> 
+        match a.variable_type with
+        |TYPE_array (t,_) when $3=TYPE_int -> t
+        |_ ->error "type mismatch not an array or invalid index" |>ignore; TYPE_none
+    |_ ->error "type mismatch" |>ignore; TYPE_none
+|None -> error "undeclared array" |>ignore; TYPE_none
+
+}
+
+cond: T_TRUE { () }
+     |T_FALSE { () }
+     |LPAREN cond RPAREN { () }
+     |NOT cond { () }
+     |expr compop expr { checkCondSemantics $1 $3 parseState "Semantic Error at %A - %A: Type Mismatch\n" }
+     |cond AND cond { () }
+     |cond OR cond { () }
+     |expr compop error { syntaxError parseState "Syntax Error at %A: Invalid Condition\n" ()}
+     |error compop expr { syntaxError parseState "Syntax Error at %A: Invalid Condition\n" ()}
+
+compop: EQ { EQ }
+       |NE { NE }
+       |LT { LT }
+       |GT { GT }
+       |LE { LE }
+       |GE { GE }

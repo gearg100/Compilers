@@ -1,0 +1,11 @@
+C:\Users\George\Documents\Visual Studio 2010\Projects\Compilers2011\Semantic\bin\Debug\Language.XML
+C:\Users\George\Documents\Visual Studio 2010\Projects\Compilers2011\Semantic\bin\Debug\Language.exe
+C:\Users\George\Documents\Visual Studio 2010\Projects\Compilers2011\Semantic\bin\Debug\Language.pdb
+C:\Users\George\Documents\Visual Studio 2010\Projects\Compilers2011\Semantic\bin\Debug\FSharp.PowerPack.dll
+C:\Users\George\Documents\Visual Studio 2010\Projects\Compilers2011\Semantic\bin\Debug\FSharp.PowerPack.pdb
+C:\Users\George\Documents\Visual Studio 2010\Projects\Compilers2011\Semantic\bin\Debug\FSharp.PowerPack.xml
+C:\Users\George\Documents\Visual Studio 2010\Projects\Compilers2011\Semantic\obj\x86\Debug\ResolveAssemblyReference.cache
+C:\Users\George\Documents\Visual Studio 2010\Projects\Compilers2011\Semantic\obj\x86\Debug\Lexer.fs
+C:\Users\George\Documents\Visual Studio 2010\Projects\Compilers2011\Semantic\obj\x86\Debug\Parser.fs
+C:\Users\George\Documents\Visual Studio 2010\Projects\Compilers2011\Semantic\obj\x86\Debug\Language.exe
+C:\Users\George\Documents\Visual Studio 2010\Projects\Compilers2011\Semantic\obj\x86\Debug\Language.pdb

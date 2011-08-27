@@ -1,0 +1,21 @@
+fibonacci () : proc
+ 
+  limit :int ;
+
+  tailRecursive (prev : int, cur: int, index : int) : proc
+  
+    { -- start tailRecursive
+      if (index > limit) return;
+      writeString("Fibonacci number ");
+      writeInteger(index);
+      writeString(" is ");
+      writeInteger(cur);
+      writeString(".\n");
+      tailRecursive(cur, prev+cur, index+1);
+    } -- end TailRecursive
+  
+  { -- start fibonacci
+    writeString("Limit: ");
+    limit = readInteger();
+    tailRecursive(0,1,1);
+  }

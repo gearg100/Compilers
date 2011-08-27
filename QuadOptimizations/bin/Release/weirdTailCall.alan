@@ -1,0 +1,37 @@
+weird () : proc
+
+y : int;
+
+  tail (a : reference int, x : int) : int
+  
+  z : int;
+  
+  {
+    writeString("Entering tail with a =");
+    writeInteger(a);
+    writeString(" and x = ");
+    writeInteger(x);
+    writeString(".\n");
+    z = a;
+    if (z > x) {      
+      return tail(z,x-1);
+    }
+    else if (z < x){
+      return tail(z, x+1);
+    }
+    else {
+      writeString("Entering else part\n");
+      a = 0;
+      return 0;
+    }
+  }
+  
+{
+  y = 5;
+  writeString("Result is: ");
+  writeInteger(tail (y, 0));
+  writeString("\nAfter Call: ");
+  writeInteger(y);
+  writeString("\n");
+}
+    

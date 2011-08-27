@@ -1,0 +1,10 @@
+C:\Users\George\documents\visual studio 2010\Projects\Compilers2011\Compilers2011\obj\x86\Debug\ResolveAssemblyReference.cache
+C:\Users\George\documents\visual studio 2010\Projects\Compilers2011\Compilers2011\obj\x86\Debug\Lexer.fs
+C:\Users\George\documents\visual studio 2010\Projects\Compilers2011\Compilers2011\bin\Debug\Language.XML
+C:\Users\George\documents\visual studio 2010\Projects\Compilers2011\Compilers2011\bin\Debug\Language.exe
+C:\Users\George\documents\visual studio 2010\Projects\Compilers2011\Compilers2011\bin\Debug\Language.pdb
+C:\Users\George\documents\visual studio 2010\Projects\Compilers2011\Compilers2011\obj\x86\Debug\Language.exe
+C:\Users\George\documents\visual studio 2010\Projects\Compilers2011\Compilers2011\obj\x86\Debug\Language.pdb
+C:\Users\George\Documents\Visual Studio 2010\Projects\Compilers2011\Compilers2011\bin\Debug\FSharp.PowerPack.dll
+C:\Users\George\Documents\Visual Studio 2010\Projects\Compilers2011\Compilers2011\bin\Debug\FSharp.PowerPack.pdb
+C:\Users\George\Documents\Visual Studio 2010\Projects\Compilers2011\Compilers2011\bin\Debug\FSharp.PowerPack.xml

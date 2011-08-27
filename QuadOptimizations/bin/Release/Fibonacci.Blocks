@@ -1,0 +1,77 @@
+BlockName 0 , Id = 1
+Starts at @1 and ends at @1
+1:	unit , tailRecursive, - , -
+
+BlockName 1 , Id = 2
+Starts at @2 and ends at @3
+2:	>    , index, limit, 4
+3:	jump , - , - , 5
+
+BlockName 2 , Id = 4
+Starts at @4 and ends at @4
+4:	ret  , -, -, -
+
+BlockName 3 , Id = 5
+Starts at @5 and ends at @6
+5:	par  , "Fibonacci number " , R , -
+6:	call , - , - , writeString
+
+BlockName 4 , Id = 7
+Starts at @7 and ends at @8
+7:	par  , index , V , -
+8:	call , - , - , writeInteger
+
+BlockName 5 , Id = 9
+Starts at @9 and ends at @10
+9:	par  , " is " , R , -
+10:	call , - , - , writeString
+
+BlockName 6 , Id = 11
+Starts at @11 and ends at @12
+11:	par  , cur , V , -
+12:	call , - , - , writeInteger
+
+BlockName 7 , Id = 13
+Starts at @13 and ends at @14
+13:	par  , ".\n" , R , -
+14:	call , - , - , writeString
+
+BlockName 8 , Id = 15
+Starts at @15 and ends at @20
+15:	par  , cur , V , -
+16:	+    , prev, cur, $1
+17:	par  , $1 , V , -
+18:	+    , index, 1, $2
+19:	par  , $2 , V , -
+20:	call , - , - , tailRecursive
+
+BlockName 9 , Id = 21
+Starts at @21 and ends at @21
+21:	endu , tailRecursive, - , -
+
+BlockName 0 , Id = 22
+Starts at @22 and ends at @22
+22:	unit , fibonacci, - , -
+
+BlockName 1 , Id = 23
+Starts at @23 and ends at @24
+23:	par  , "Limit: " , R , -
+24:	call , - , - , writeString
+
+BlockName 2 , Id = 25
+Starts at @25 and ends at @26
+25:	par  , $3 , RET , -
+26:	call , - , - , readInteger
+
+BlockName 3 , Id = 27
+Starts at @27 and ends at @31
+27:	:=   , $3, - , limit
+28:	par  , 0 , V , -
+29:	par  , 1 , V , -
+30:	par  , 1 , V , -
+31:	call , - , - , tailRecursive
+
+BlockName 4 , Id = 32
+Starts at @32 and ends at @32
+32:	endu , fibonacci, - , -
+

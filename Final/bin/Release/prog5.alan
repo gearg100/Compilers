@@ -1,0 +1,17 @@
+prog5 () : proc
+   i : byte;
+   n : int;
+   {
+      writeString("Give me a number:");
+      writeString(" ");
+      n = readInteger();
+      writeChar(shrink(10));
+      i = '\x00';
+      while (i <= shrink(n)) {
+         if (i % '\x02' == '\0') {
+            writeInteger(extend(i * '\x02' / '\x03'));
+            writeChar(shrink(10));
+         }
+         i = i + '\x01';
+      }
+   }

@@ -1,0 +1,11 @@
+C:\Users\George\Documents\Visual Studio 2010\Projects\Compilers2011\QuadOptimizations\bin\Debug\QuadOptimizations.XML
+C:\Users\George\Documents\Visual Studio 2010\Projects\Compilers2011\QuadOptimizations\bin\Debug\QuadOptimizations.exe
+C:\Users\George\Documents\Visual Studio 2010\Projects\Compilers2011\QuadOptimizations\bin\Debug\QuadOptimizations.pdb
+C:\Users\George\Documents\Visual Studio 2010\Projects\Compilers2011\QuadOptimizations\bin\Debug\FSharp.PowerPack.dll
+C:\Users\George\Documents\Visual Studio 2010\Projects\Compilers2011\QuadOptimizations\bin\Debug\FSharp.PowerPack.pdb
+C:\Users\George\Documents\Visual Studio 2010\Projects\Compilers2011\QuadOptimizations\bin\Debug\FSharp.PowerPack.xml
+C:\Users\George\Documents\Visual Studio 2010\Projects\Compilers2011\QuadOptimizations\obj\x86\Debug\ResolveAssemblyReference.cache
+C:\Users\George\Documents\Visual Studio 2010\Projects\Compilers2011\QuadOptimizations\obj\x86\Debug\Lexer.fs
+C:\Users\George\Documents\Visual Studio 2010\Projects\Compilers2011\QuadOptimizations\obj\x86\Debug\Parser.fs
+C:\Users\George\Documents\Visual Studio 2010\Projects\Compilers2011\QuadOptimizations\obj\x86\Debug\QuadOptimizations.exe
+C:\Users\George\Documents\Visual Studio 2010\Projects\Compilers2011\QuadOptimizations\obj\x86\Debug\QuadOptimizations.pdb

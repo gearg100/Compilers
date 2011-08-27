@@ -1,0 +1,126 @@
+1:	unit , swap, - , -
+2:	:=   , x, - , t
+3:	:=   , y, - , x
+4:	:=   , t, - , y
+5:	endu , swap, - , -
+6:	unit , bsort, - , -
+7:	:=   , 121, - , changed
+8:	==   , changed, 121, 10
+9:	jump , - , - , 46
+10:	:=   , 110, - , changed
+11:	:=   , 0, - , i
+12:	-    , n, 1, $1
+13:	<    , i, $1, 15
+14:	jump , - , - , 45
+15:	==   , choice, 1, 17
+16:	jump , - , - , 30
+17:	array, x, i, $2
+18:	+    , i, 1, $3
+19:	array, x, $3, $4
+20:	>    , [$2], [$4], 22
+21:	jump , - , - , 29
+22:	array, x, i, $5
+23:	par  , [$5] , R , -
+24:	+    , i, 1, $6
+25:	array, x, $6, $7
+26:	par  , [$7] , R , -
+27:	call , - , - , swap
+28:	:=   , 121, - , changed
+29:	jump , - , - , 42
+30:	array, x, i, $8
+31:	+    , i, 1, $9
+32:	array, x, $9, $10
+33:	<    , [$8], [$10], 35
+34:	jump , - , - , 42
+35:	array, x, i, $11
+36:	par  , [$11] , R , -
+37:	+    , i, 1, $12
+38:	array, x, $12, $13
+39:	par  , [$13] , R , -
+40:	call , - , - , swap
+41:	:=   , 121, - , changed
+42:	+    , i, 1, $14
+43:	:=   , $14, - , i
+44:	jump , - , - , 12
+45:	jump , - , - , 8
+46:	endu , bsort, - , -
+47:	unit , writeArray, - , -
+48:	par  , msg , R , -
+49:	call , - , - , writeString
+50:	:=   , 0, - , i
+51:	<    , i, n, 53
+52:	jump , - , - , 63
+53:	>    , i, 0, 55
+54:	jump , - , - , 57
+55:	par  , ", " , R , -
+56:	call , - , - , writeString
+57:	array, x, i, $15
+58:	par  , [$15] , V , -
+59:	call , - , - , writeInteger
+60:	+    , i, 1, $16
+61:	:=   , $16, - , i
+62:	jump , - , - , 51
+63:	par  , "\n" , R , -
+64:	call , - , - , writeString
+65:	endu , writeArray, - , -
+66:	unit , main, - , -
+67:	par  , "Seed :\t" , R , -
+68:	call , - , - , writeString
+69:	par  , $17 , RET , -
+70:	call , - , - , readInteger
+71:	:=   , $17, - , seed
+72:	par  , "How do you want to sort?\n" , R , -
+73:	call , - , - , writeString
+74:	par  , "How do you want to sort?\x0a" , R , -
+75:	call , - , - , writeString
+76:	par  , "  1. Min to Max\n" , R , -
+77:	call , - , - , writeString
+78:	par  , "  2. Max to Min\n" , R , -
+79:	call , - , - , writeString
+80:	par  , "Choice : " , R , -
+81:	call , - , - , writeString
+82:	par  , $18 , RET , -
+83:	call , - , - , readInteger
+84:	:=   , $18, - , choice
+85:	<    , choice, 1, 89
+86:	jump , - , - , 87
+87:	>    , choice, 2, 89
+88:	jump , - , - , 101
+89:	par  , "How do you want to sort?\x0a" , R , -
+90:	call , - , - , writeString
+91:	par  , "  1. Min to Max\n" , R , -
+92:	call , - , - , writeString
+93:	par  , "  2. Max to Min\n" , R , -
+94:	call , - , - , writeString
+95:	par  , "Choice : " , R , -
+96:	call , - , - , writeString
+97:	par  , $19 , RET , -
+98:	call , - , - , readInteger
+99:	:=   , $19, - , choice
+100:	jump , - , - , 85
+101:	:=   , 0, - , i
+102:	<    , i, 16, 104
+103:	jump , - , - , 114
+104:	*    , seed, 137, $20
+105:	+    , $20, 220, $21
+106:	+    , $21, i, $22
+107:	%    , $22, 101, $23
+108:	:=   , $23, - , seed
+109:	array, x, i, $24
+110:	:=   , seed, - , [$24]
+111:	+    , i, 1, $25
+112:	:=   , $25, - , i
+113:	jump , - , - , 102
+114:	par  , "Initial array: " , R , -
+115:	par  , 16 , V , -
+116:	par  , x , R , -
+117:	call , - , - , writeArray
+118:	par  , 16 , V , -
+119:	par  , choice , V , -
+120:	par  , x , R , -
+121:	call , - , - , bsort
+122:	par  , "Sorted array: " , R , -
+123:	par  , 16 , V , -
+124:	par  , x , R , -
+125:	call , - , - , writeArray
+126:	endu , main, - , -

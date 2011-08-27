@@ -1,0 +1,14 @@
+prog2 () : proc
+   a : int;
+   b : int;
+   c : int;
+   {
+      writeString("Give me a number:");
+      writeString(" ");
+      b = readInteger();
+      a = 15;
+      writeInteger(b);
+      writeString(" + 15 = ");
+      c = a + b;
+      writeInteger(c);
+   }

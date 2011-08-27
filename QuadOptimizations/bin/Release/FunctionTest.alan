@@ -1,0 +1,22 @@
+functionTest () : proc
+
+  set (x : reference int) : int
+  {
+    x = 42;
+    return 0;
+  }
+  
+  writeTwoIntegers(a : int, b : int) : proc
+  {
+    writeInteger(a);
+    writeString(" ");
+    writeInteger(b);
+    writeString("\n");
+  }
+  
+  foo : int;
+  
+  {
+    foo = 1;
+    writeTwoIntegers(set(foo), foo);
+  }  

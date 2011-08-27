@@ -1,0 +1,102 @@
+grafoi () : proc
+
+  -- 1001 nodes because of masm... 
+  first_child : int [1001];
+  second_child : int [1001];
+    
+  first_parent : int [1001];
+  second_parent : int [1001];
+
+  n : int;
+  i : int;
+  a : int;
+  b : int;
+  start : int;
+  res : int;
+
+  -- procedure to find a root
+  find_root () : int 
+  
+    i : int;
+      
+    {
+      i = 1;
+      while (i < n){
+        if (first_parent[i] == 0) {
+          return i;
+        }
+        i = i + 1;
+      }
+    }
+  -- end procedure find_root
+
+  -- procedure to find start of common path
+  find_start_of_path (previous : int, node : int) : int
+
+    {
+      if (second_parent[node] > 0) {
+        return find_start_of_path (node, first_child[node]);
+      }
+      else return previous;
+    }
+  -- end find_start_of_path
+
+  -- procedure to find and print path
+  find_path (node : int) : proc
+
+    {
+      writeInteger(node);
+      writeString(" ");
+      if (first_child[node] == 0) {
+        return;
+      }
+      else if (second_child[node] == 0) {
+        find_path (first_child[node]);
+      }
+      else return;
+    }
+  -- end find__path
+        
+  {
+    n = readInteger();
+    i = 1;
+
+    -- initialization
+    while (i <= n) {
+      first_child[i] = 0;
+      second_child[i] = 0;
+      first_parent[i] = 0;
+      second_parent[i] = 0;
+      i = i + 1;
+    }
+    
+
+    -- Reading the edges
+    i = 1;
+    while (i <= n-1) {
+      a = readInteger();
+      b = readInteger();
+      if (first_child[a] > 0){
+        second_child[a] = b;
+      }
+      else {
+        first_child[a] = b;
+      }
+      if (first_parent[b]>0) {
+        second_parent[b] = a;
+      }
+      else {
+        first_parent[b] = a;
+      }
+      i = i + 1;
+    }
+    
+    start = find_root();
+    if (first_child[start] == 0){
+      writeInteger(0);
+      writeString("\n");
+      return;
+    }
+    start = find_start_of_path(start, first_child[start]);
+    find_path(start);
+  }

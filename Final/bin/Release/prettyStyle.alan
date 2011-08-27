@@ -1,0 +1,54 @@
+(* prettyStyle created by Clark *)
+
+prettyStyle () : proc
+
+	-- function starLine
+	-- prints a row of 'ch' characters 'size' times.
+	starLine (ch : byte, size : int) : proc
+		i : int;
+	{
+		i = 0;
+		while (i < size) {
+			writeChar(ch);
+			i = i + 1;
+		}	
+	}
+
+	-- function starChar
+	-- prints a 'phrase' with 'ch' between each two consequent
+	-- characters.
+	starChar (phrase: reference byte[], ch : byte, size : int) : proc
+		i : int;
+	{
+		i = 0;
+		while (i < size) {
+			writeChar(ch);       writeChar(' ');
+			writeChar(phrase[i]); writeChar(' ');
+			i = i + 1;
+		}
+		writeChar(ch);
+	}
+
+-- function starStyle
+-- prints a phrase really nice.
+	size : int;
+	sym  : byte[20];
+
+{
+	writeString("Give me a word: ");
+	readString(20, sym);
+	size = strlen(sym);
+
+	writeString("Let\'s print this nice...\n\n");
+	starLine('*', 4 * size + 1); writeChar('\n');
+	starChar(sym, '*', size);    writeChar('\n');
+	starLine('*', 4 * size + 1); writeChar('\n');
+
+	-- or...
+	writeChar('\n');
+
+	starLine('#', 4 * size + 1); writeChar('\n');
+	starChar(sym, '-', size);    writeChar('\n');
+	starLine('#', 4 * size + 1); writeChar('\n');
+	
+}

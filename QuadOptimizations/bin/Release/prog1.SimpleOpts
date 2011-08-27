@@ -1,0 +1,16 @@
+BlockName 0 , Id = 1
+Starts at @1 and ends at @1
+1:	unit , prog1, - , -
+
+BlockName 1 , Id = 2
+Starts at @2 and ends at @17
+5:	:=   , 3, - , b
+12:	:=   , 25, - , a
+14:	:=   , 22, - , c
+16:	par  , c , V , -
+17:	call , - , - , writeInteger
+
+BlockName 2 , Id = 18
+Starts at @18 and ends at @18
+18:	endu , prog1, - , -
+
