@@ -148,7 +148,6 @@ type byteOpType = System.Byte->System.Byte->System.Byte
 type intCmpType = System.Int16->System.Int16->bool
 type byteCmpType = System.Byte->System.Byte->bool
 let constantFolding (block:blockWithIdType) =
-    let code = block.block.quads
     let byteHash = new Dictionary<Hashcons.hash_consed<string>,System.Byte>()
     let intHash = new Dictionary<Hashcons.hash_consed<string>,System.Int16>()
     let rec chooser (quads:quadWithIndexType list) acc =
@@ -342,7 +341,7 @@ let constantFolding (block:blockWithIdType) =
                     |None ->
                         ()
                 |_-> failwith "wtf"
-                h :: acc 
+                h :: acc
             | _ ->
                 h :: acc
             |> chooser t
@@ -366,7 +365,9 @@ let makeControlFlowGraphOfUnit (unit:blockWithIdType list) =
             |QuadJump(l) ->
                 let childIndex = blockNameHash.[!l]
                 childrenArray.[index] <- childIndex :: childrenArray.[index]
-                parentsArray.[childIndex] <- index :: parentsArray.[childIndex]
+//Optimize junk block elimination
+                if parentsArray.[childIndex] <> [] then
+                    parentsArray.[childIndex] <- index :: parentsArray.[childIndex]
             |QuadRet _ -> 
                 childrenArray.[index] <- unit.Length - 1 :: childrenArray.[index]
                 parentsArray.[unit.Length - 1] <- index :: parentsArray.[unit.Length - 1]
@@ -386,12 +387,16 @@ let makeControlFlowGraphOfUnit (unit:blockWithIdType list) =
         |[] ->
             List.rev acc
         |h::t ->
-            helper (i+1) t ({ 
-                                id = i; 
-                                predecessors = parentsArray.[i]; 
-                                successors = childrenArray.[i]; 
-                                block = h.block 
-                            }::acc)
+//Junk block elimination optimizing version
+            if parentsArray.[h.name] <> [] then
+                helper (i+1) t ({ 
+                                    id = i; 
+                                    predecessors = parentsArray.[i]; 
+                                    successors = childrenArray.[i]; 
+                                    block = h.block 
+                                }::acc)
+            else
+                helper (i+1) t acc
     helper 0 unit []
 
 let inline optimizeIntermediate unitList = 
