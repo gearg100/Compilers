@@ -2,6 +2,7 @@
 
 open System
 open System.IO
+open Microsoft.FSharp.Text
 open Microsoft.FSharp.Text.Lexing
 
 open Lexer
@@ -48,19 +49,15 @@ module Compiler=
         with 
         | :? Error.Terminate -> 
             printfn "Terminate"
-            Console.ReadLine() |> ignore
             []
         | :? Symbol.Exit -> 
             printfn "Exit" 
-            Console.ReadLine() |> ignore
             []
         | Failure s -> 
             printfn "Syntax Error: Unrecognized Syntax Error.\nHint: Perhaps there are orphaned brackets or missing semicolons"
-            Console.ReadLine() |> ignore
             []
         | ex->
             printfn "Unhandled Exception: %s \n\n%A \n\n%A \n\n%A" ex.Message ex.Data ex.StackTrace ex.TargetSite
-            Console.ReadLine() |> ignore
             []
 
 
@@ -95,48 +92,56 @@ module Compiler=
                  ) graph
 
 let main () =
-    let args = System.Environment.GetCommandLineArgs()
-    let arguments = 
-        dict [for i in args ->
-                let ar=i.Split(':')
-                if ar.Length=1 then (ar.[0].Trim(),"null")
-                else (ar.[0].Trim(),ar.[1].Trim())]
+    let inputFileCandidate = ref ""
+    let outputFileCandidate = ref ""
+    let produceFinal = ref true
+    let optimizeFlag = ref false
+    let debugFlags = [|"Blocks";"SimpleOpts";"ControlGraph"|]
+    let debugMode = ref "" 
+    let specs =
+        [
+            "-o", ArgType.String (fun s -> outputFileCandidate := s), "Name of the output"
+            "-O", ArgType.Set optimizeFlag, "Enable Optimizations"
+            "-i", ArgType.Clear produceFinal, "Emits intermediate code"
+            "-f", ArgType.Set produceFinal, "Emits final code"
+            "--debug", ArgType.String (fun s -> debugMode := s ), "Emits basic blocks, simply optimized blocks or control graph nodes"
+        ]
+        |> List.map (fun (sh, ty, desc) -> ArgInfo(sh, ty, desc))
+    do ArgParser.Parse(specs, (fun infile -> inputFileCandidate := infile)) 
     try
-        let inputFile =
-            if (arguments.ContainsKey "-in") && (File.Exists arguments.["-in"]) then
-                arguments.["-in"]
-            else failwith "Proper Usage: QuadOptimizations.exe [-i|-f|-debug:[Blocks|ControlGraph|SimpleOpts]] [-optimize] -in:<inputFile> -out:<outputFile>"
-        let outputFile = 
-            if arguments.ContainsKey "-out" then
-                arguments.["-out"]
-            elif arguments.ContainsKey "-debug" then
-                (Path.GetFileNameWithoutExtension inputFile) + "." + arguments.["-debug"]
-            elif arguments.ContainsKey "-i" then 
-                (Path.GetFileNameWithoutExtension inputFile) + ".quads" 
-            else 
-                (Path.GetFileNameWithoutExtension inputFile) + ".asm"
-        Compiler.initialize inputFile outputFile
-        if arguments.ContainsKey "-debug" then
-            match arguments.["-debug"] with
-            |"SimpleOpts" ->
-                Compiler.frontend() |> simpleBackwardPropagation |> (List.iter (makeBasicBlocksOfUnit >> List.map (constantFolding) >> Compiler.printBlocks >> Compiler.printResult))
-            |"Blocks" ->
-                Compiler.frontend() |> (List.iter (makeBasicBlocksOfUnit >> Compiler.printBlocks >> Compiler.printResult))
-            |"ControlGraph" ->
-                 Compiler.frontend() |> (List.iter (makeBasicBlocksOfUnit >> makeControlFlowGraphOfUnit >> Compiler.printControlFlowGraph >> Compiler.printResult))
-            |_ ->
-                printfn "Not Implemented"
-        else
-            Compiler.frontend() |> (if arguments.ContainsKey "-optimize" 
+        if not <| File.Exists !inputFileCandidate then failwithf "Specified Input File \"%s\" does not exist" !inputFileCandidate
+        if !debugMode <> "" && not <| Array.exists (fun s -> s = !debugMode) debugFlags then failwithf "Specified Debug Flag \"%s\" does not exist" !debugMode
+        let inputFile = 
+            !inputFileCandidate
+        let outputFile =
+            if !outputFileCandidate <> "" then !outputFileCandidate
+            elif !debugMode <> "" then Path.GetFileNameWithoutExtension(inputFile) + "." + (!debugMode).ToLower()
+            elif not !produceFinal then Path.GetFileNameWithoutExtension(inputFile) + ".quads"
+            else (Path.GetFileNameWithoutExtension inputFile) + ".asm"
+        do Compiler.initialize inputFile outputFile
+        let intermediate = Compiler.frontend ()
+        if intermediate <> [] then
+            intermediate |> if !debugMode <> "" then
+                                match !debugMode with
+                                |"SimpleOpts" ->
+                                    simpleBackwardPropagation >> (List.iter (makeBasicBlocksOfUnit >> List.map (constantFolding) >> Compiler.printBlocks >> Compiler.printResult))
+                                |"Blocks" ->
+                                    (List.iter (makeBasicBlocksOfUnit >> Compiler.printBlocks >> Compiler.printResult))
+                                |"ControlGraph" ->
+                                    (List.iter (makeBasicBlocksOfUnit >> makeControlFlowGraphOfUnit >> Compiler.printControlFlowGraph >> Compiler.printResult))
+                                |_ ->
+                                    eprintfn "Not Implemented"
+                                    ignore
+                            else
+                                (if !optimizeFlag
                                     then Compiler.optimizer
                                     else id)
-                                |> (fun intermediateList ->
-                                        if arguments.ContainsKey "-i"
+                                >> (fun intermediateList ->
+                                    if not !produceFinal
                                         then Compiler.printIntermediate intermediateList
                                         else intermediateList |> Compiler.backend |> Compiler.printFinal)
-                                |> Compiler.printResult
+                                >> Compiler.printResult
     with
-    | Failure s -> Console.WriteLine s
-    | ex -> Console.WriteLine (ex.Message + Environment.NewLine + ex.StackTrace) 
-
+    | Failure s -> Console.Error.WriteLine s
+    | ex -> Console.Error.WriteLine (ex.Message + Environment.NewLine + ex.StackTrace)
 main ()
