@@ -17,26 +17,94 @@ module UnitList =
     let inline iteri initValue f (unitList: 'a list list) =
         let i = ref (initValue-1)
         List.iter (List.iter (fun quad -> incr i; f !i quad)) unitList
-            
-type blockType =
-    {
-        startingIndex:int;
-        endingIndex:int;
-        mutable quads:quadWithIndexType list;
-    }
-type blockWithIdType =
-    {
-        id:int;
-        name:int;
-        block:blockType
-    }
-type controlFlowGraphNodeType =
-    {
-        id:int;
-        predecessors:int list;
-        successors:int list;
-        block:blockType;
-    }
+
+module Block =
+    type blockType =
+        {
+            startingIndex:int;
+            endingIndex:int;
+            mutable quads:quadWithIndexType list;
+        }
+    type blockWithIdType =
+        {
+            id:int;
+            name:int;
+            block:blockType
+        }
+        override block.ToString() =
+            "BlockName "+ block.name.ToString() + " , Id = " + block.id.ToString() 
+            :: "Starts at @" + block.block.startingIndex.ToString() + " and ends at @" + block.block.endingIndex.ToString() 
+            :: List.map quadWithIndexType.print block.block.quads @ [""]
+            |> List.fold (fun acc str -> str + System.Environment.NewLine + acc) ""  
+
+    type controlFlowGraphNodeType =
+        {
+            id:int;
+            predecessors:int list;
+            successors:int list;
+            block:blockType;
+        }
+        override graphNode.ToString() =
+            "GraphNodeId "+ graphNode.id.ToString()
+            :: sprintf "Predecessors = %A" graphNode.predecessors
+            :: sprintf "Successors = %A" graphNode.successors
+            :: "Code :"
+            :: List.map quadWithIndexType.print graphNode.block.quads
+            |> List.fold (fun acc str -> str + System.Environment.NewLine + acc) "" 
+
+    let blockNameHash = new Dictionary<int,int>()
+
+    let inline makeBasicBlocksOfUnit (unit:quadWithIndexType list) =
+        let blockCounter = ref -1
+        let inline makeBlock (code:quadWithIndexType list) =
+            incr blockCounter
+            let _end = code.Head.index
+            let _code = List.rev code
+            let _start = _code.Head.index
+            let _block =
+                {
+                    startingIndex = _start
+                    endingIndex = _end
+                    quads = _code
+                }
+            blockNameHash.[_start] <- !blockCounter
+            {
+                name = !blockCounter 
+                id = _start
+                block = _block
+            }
+        let rec makeBasicBlocksOfUnitHelper (source:quadWithIndexType list) 
+            (blockAcc:quadWithIndexType list) (unitAcc:blockWithIdType list) =  
+            match source,blockAcc with
+            |[], _-> 
+                failwith "empty source???"//List.rev unitAcc
+            |[enduQuad],[] ->
+                let fblock =
+                    makeBlock [enduQuad]
+                List.rev (fblock::unitAcc)
+            |[enduQuad],_ ->
+                let pblock =
+                    makeBlock blockAcc
+                let fblock =
+                    makeBlock [enduQuad]
+                List.rev (fblock::pblock::unitAcc)
+            |h::t,[] ->
+                makeBasicBlocksOfUnitHelper t [h] unitAcc
+            |h::t,acc ->
+                match h.quad with
+                |_ when (labelRegistry.Contains h.index) ->
+                    makeBasicBlocksOfUnitHelper t [h] (makeBlock acc :: unitAcc)
+                |QuadJump _ |QuadRet _ ->
+                    makeBasicBlocksOfUnitHelper t [] (makeBlock (h :: acc) :: unitAcc)
+                //|QuadCall (f,lst) ->
+                //    makeBasicBlocksOfUnitHelper t [] (makeBlock (h :: acc) :: unitAcc)
+                |_ ->
+                    makeBasicBlocksOfUnitHelper t (h::acc) unitAcc
+        makeBasicBlocksOfUnitHelper unit.Tail [] [makeBlock [unit.Head]]
+
+module List =
+    let inline take n lst =
+        Seq.take n lst |> Seq.toList
 
 let inline codeCleanUp (code:quadType list list) =
     List.map (List.filter (fun quad -> 
@@ -46,61 +114,6 @@ let inline codeCleanUp (code:quadType list list) =
                                 |_ ->
                                     true)) code
 
-let blockNameHash = new Dictionary<int,int>();
-let inline makeBasicBlocksOfUnit (unit:quadWithIndexType list) =
-    let blockCounter = ref -1
-    let inline makeBlock (code:quadWithIndexType list) =
-        incr blockCounter
-        let _end = code.Head.index
-        let _code = List.rev code
-        let _start = _code.Head.index
-        let _block =
-            {
-                startingIndex = _start
-                endingIndex = _end
-                quads = _code
-            }
-        blockNameHash.[_start] <- !blockCounter
-        {
-            name = !blockCounter 
-            id = _start
-            block = _block
-        }
-    let rec makeBasicBlocksOfUnitHelper (source:quadWithIndexType list) 
-        (blockAcc:quadWithIndexType list) (unitAcc:blockWithIdType list) =  
-        match source,blockAcc with
-        |[], _-> 
-            failwith "empty source???"//List.rev unitAcc
-        |[enduQuad],[] ->
-            let fblock =
-                makeBlock [enduQuad]
-            List.rev (fblock::unitAcc)
-        |[enduQuad],_ ->
-            let pblock =
-                makeBlock blockAcc
-            let fblock =
-                makeBlock [enduQuad]
-            List.rev (fblock::pblock::unitAcc)
-        |h::t,[] ->
-            makeBasicBlocksOfUnitHelper t [h] unitAcc
-        |h::t,acc ->
-            match h.quad with
-            |QuadJump _ |QuadRet _ ->
-                makeBasicBlocksOfUnitHelper t [] (makeBlock (h::acc) :: unitAcc)
-            |QuadCall _ ->
-                makeBasicBlocksOfUnitHelper t [] (makeBlock (h :: acc) :: unitAcc)
-            |_ when (labelRegistry.Contains h.index) ->
-                makeBasicBlocksOfUnitHelper t [h] (makeBlock acc :: unitAcc)
-            |_ ->
-                makeBasicBlocksOfUnitHelper t (h::acc) unitAcc
-    makeBasicBlocksOfUnitHelper unit.Tail [] [makeBlock [unit.Head]]
-
-let inline printBlock (block:blockWithIdType) =
-   (fun (block:blockWithIdType) -> 
-                    "BlockName "+ block.name.ToString() + " , Id = " + block.id.ToString() 
-                    :: "Starts at @" + block.block.startingIndex.ToString() + " and ends at @" + block.block.endingIndex.ToString() 
-                    :: List.map quadWithIndexType.print block.block.quads @ [""])
-                block
 //Some Simple Optimizations
 let inline simpleBackwardPropagation (code:quadWithIndexType list list) =
     let rec simpleBackwardPropagationHelper acc (quadList:quadWithIndexType list) =
@@ -143,26 +156,27 @@ let inline simpleBackwardPropagation (code:quadWithIndexType list list) =
                 simpleBackwardPropagationHelper (h1::acc) (h2::t) 
     List.map (simpleBackwardPropagationHelper []) code
 
+open Block
 type intOpType = System.Int16->System.Int16->System.Int16
 type byteOpType = System.Byte->System.Byte->System.Byte
 type intCmpType = System.Int16->System.Int16->bool
 type byteCmpType = System.Byte->System.Byte->bool
 let constantFolding (block:blockWithIdType) =
-    let byteHash = new Dictionary<Hashcons.hash_consed<string>,System.Byte>()
-    let intHash = new Dictionary<Hashcons.hash_consed<string>,System.Int16>()
+    let byteHash = new Dictionary<entryWithTypeAndNesting,System.Byte>()
+    let intHash = new Dictionary<entryWithTypeAndNesting,System.Int16>()
     let rec chooser (quads:quadWithIndexType list) acc =
         let inline tryGetIntConstant (elem:quadElementType) = 
             match elem with
-            |Entry (e,_,_) when intHash.ContainsKey(e.entry_id) ->
-                Some intHash.[e.entry_id]
+            |Entry e when intHash.ContainsKey(e) ->
+                Some intHash.[e]
             |Int i ->
                 Some i
             |_ -> 
                 None
         let inline tryGetByteConstant (elem:quadElementType) = 
             match elem with
-            |Entry (e,_,_) when byteHash.ContainsKey(e.entry_id) ->
-                Some byteHash.[e.entry_id]
+            |Entry e when byteHash.ContainsKey(e) ->
+                Some byteHash.[e]
             |Byte b ->
                 Some b
             |_ -> 
@@ -175,9 +189,8 @@ let constantFolding (block:blockWithIdType) =
                 match tryGetConstant a, tryGetConstant b with
                 |Some c1,Some c2 ->
                     let result = operand c1 c2
-                    let (e,_,_) = s
-                    hashTable.[e.entry_id] <- result                    
-                    match e.entry_info with
+                    hashTable.[s] <- result                    
+                    match s.entry.entry_info with
                     |ENTRY_variable _ |ENTRY_parameter _ ->
                         h.quad <- QuadAssign(elemConstr result, Entry s)
                         h :: acc
@@ -200,9 +213,8 @@ let constantFolding (block:blockWithIdType) =
                     h ::acc
                 |Some c1,Some c2 ->
                     let result = operand c1 c2
-                    let (e,_,_) = s
-                    hashTable.[e.entry_id] <- result                    
-                    match e.entry_info with
+                    hashTable.[s] <- result                    
+                    match s.entry.entry_info with
                     |ENTRY_variable _ |ENTRY_parameter _ ->
                         h.quad <- QuadAssign(elemConstr result, Entry s)
                         h :: acc
@@ -224,10 +236,10 @@ let constantFolding (block:blockWithIdType) =
                 |Some c1,Some c2 ->
                     if operand c1 c2 
                     then
-                        h.quad <- QuadJump(i1) 
-                        h :: acc
-                    else
                         acc
+                    else
+                        h.quad <- QuadJump(i2) 
+                        h :: acc
                 |Some c, None ->
                     h.quad <- constr(elemConstr c, b, i1, i2)
                     h :: acc
@@ -238,40 +250,35 @@ let constantFolding (block:blockWithIdType) =
                     h ::acc
             match h.quad with
             |QuadAdd(a,b,s) -> 
-                let (_,t,_) = s
-                match t with
+                match s.entryType with
                 | TYPE_int ->
                     actOp QuadAdd ((+):intOpType) a b s Int tryGetIntConstant intHash 
                 | TYPE_byte ->
                     actOp QuadAdd ((+):byteOpType) a b s Byte tryGetByteConstant byteHash
                 |_-> failwith "wtf" 
             |QuadSub(a,b,s) ->
-                let (_,t,_) = s
-                match t with
+                match s.entryType with
                 |TYPE_int ->
                     actOp QuadAdd ((-):intOpType) a b s Int tryGetIntConstant intHash 
                 |TYPE_byte ->
                     actOp QuadAdd ((-):byteOpType) a b s Byte tryGetByteConstant byteHash
                 |_-> failwith "wtf" 
             |QuadMult(a,b,s) ->
-                let (_,t,_) = s
-                match t with
+                match s.entryType with
                 |TYPE_int ->
                     actOp QuadAdd ((-):intOpType) a b s Int tryGetIntConstant intHash 
                 |TYPE_byte ->
                     actOp QuadAdd ((-):byteOpType) a b s Byte tryGetByteConstant byteHash
                 |_-> failwith "wtf" 
             |QuadDiv(a,b,s) ->
-                let (_,t,_) = s
-                match t with
+                match s.entryType with
                 |TYPE_int ->
                     actDivMod QuadAdd ((-):intOpType) a b s Int tryGetIntConstant intHash 0s
                 |TYPE_byte ->
                     actDivMod QuadAdd ((-):byteOpType) a b s Byte tryGetByteConstant byteHash 0uy
                 |_-> failwith "wtf" 
             |QuadMod(a,b,s) ->
-                let (_,t,_) = s
-                match t with
+                match s.entryType with
                 |TYPE_int ->
                     actDivMod QuadAdd ((-):intOpType) a b s Int tryGetIntConstant intHash 0s
                 |TYPE_byte ->
@@ -342,11 +349,61 @@ let constantFolding (block:blockWithIdType) =
                         ()
                 |_-> failwith "wtf"
                 h :: acc
+            |QuadPar(e,m) ->
+                if m=PASS_BY_VALUE then
+                    match quadElementType.GetType e with
+                    |TYPE_int ->
+                        match tryGetIntConstant e with
+                        |Some c ->
+                            h.quad <- QuadPar(Int c,m)
+                        |None ->
+                            ()
+                    |TYPE_byte ->
+                        match tryGetByteConstant e with
+                        |Some c ->
+                            h.quad <- QuadPar(Byte c,m)
+                        |None ->
+                            ()
+                    |_ -> ()
+                h :: acc
+            |QuadCall(f,pars)->
+                let (ENTRY_function finf) = f.entry.entry_info
+                if finf.function_mutatesForeignBytes then
+                    byteHash.Clear()
+                elif finf.function_mutatesForeignInts then
+                    intHash.Clear()
+                else Seq.iter (fun (it:entryWithTypeAndNesting) ->
+                                if it.entryType = TYPE_byte then byteHash.Remove it |>ignore
+                                elif it.entryType = TYPE_int then intHash.Remove it |>ignore) pars
+                h :: acc
             | _ ->
                 h :: acc
             |> chooser t
     block.block.quads <- chooser block.block.quads []
     block
+
+let shortenJumpPaths (unitList: blockWithIdType list) =    
+    let unitArray = List.toArray unitList
+    let rec dfs node acc=
+        let fstQuad =unitArray.[node].block.quads.Head
+        match fstQuad.quad with
+        |QuadJump x ->
+            dfs blockNameHash.[!x] (x::acc)
+        |_ ->
+            List.iter (fun l -> l:= fstQuad.index) acc
+    List.iter (fun (block:blockWithIdType) -> 
+                let quads = block.block.quads
+                match quads.[quads.Length - 1].quad with
+                |QuadJump x ->
+                    dfs blockNameHash.[!x] [x]
+                |QuadEQ (_,_,l1,l2)|QuadNE (_,_,l1,l2)|QuadLT (_,_,l1,l2)
+                |QuadGT (_,_,l1,l2)|QuadGE (_,_,l1,l2)|QuadLE (_,_,l1,l2) ->
+                    dfs blockNameHash.[!l1] [l1]
+                    dfs blockNameHash.[!l2] [l2]
+                | _ ->
+                    ()) unitList
+    unitList
+
 //Control Flow Analysis
 let makeControlFlowGraphOfUnit (unit:blockWithIdType list) =
     let childrenArray = Array.create unit.Length []
@@ -354,41 +411,49 @@ let makeControlFlowGraphOfUnit (unit:blockWithIdType list) =
     let inline func (code:blockWithIdType) =  
         let index = code.name
         let inline getChildren q =
-            match q.quad with
-            |QuadEQ (_,_,l1,l2)|QuadNE (_,_,l1,l2)|QuadLT (_,_,l1,l2)
-            |QuadGT (_,_,l1,l2)|QuadGE (_,_,l1,l2)|QuadLE (_,_,l1,l2) ->
-                let childIndex1 = blockNameHash.[!l1]
-                let childIndex2 = blockNameHash.[!l2]
-                childrenArray.[index] <- [childIndex1;childIndex2] 
-                parentsArray.[childIndex1] <- index :: parentsArray.[childIndex1]
-                parentsArray.[childIndex2] <- index :: parentsArray.[childIndex2]
-            |QuadJump(l) ->
-                let childIndex = blockNameHash.[!l]
-                childrenArray.[index] <- childIndex :: childrenArray.[index]
-//Optimize junk block elimination
-                if parentsArray.[childIndex] <> [] then
+            if parentsArray.[index]<>[] then 
+                match q.quad with
+                |QuadEQ (_,_,l1,l2)|QuadNE (_,_,l1,l2)|QuadLT (_,_,l1,l2)
+                |QuadGT (_,_,l1,l2)|QuadGE (_,_,l1,l2)|QuadLE (_,_,l1,l2) ->
+                    let childIndex1 = blockNameHash.[!l1]
+                    let childIndex2 = blockNameHash.[!l2]
+                    childrenArray.[index] <- [childIndex1; childIndex2] 
+                    parentsArray.[childIndex1] <- index :: parentsArray.[childIndex1]
+                    parentsArray.[childIndex2] <- index :: parentsArray.[childIndex2]
+                |QuadJump(l) ->
+                    let childIndex = blockNameHash.[!l]
+                    childrenArray.[index] <- childIndex :: childrenArray.[index]
                     parentsArray.[childIndex] <- index :: parentsArray.[childIndex]
-            |QuadRet _ -> 
-                childrenArray.[index] <- unit.Length - 1 :: childrenArray.[index]
-                parentsArray.[unit.Length - 1] <- index :: parentsArray.[unit.Length - 1]
-            |QuadEndUnit _ -> 
-                ()
-            |_ ->
-                childrenArray.[index] <- index + 1 :: childrenArray.[index]
-                parentsArray.[index+1] <- index :: parentsArray.[index+1]
-        match code.block.quads with
+    //Optimize junk block elimination
+                |QuadRet _ -> 
+                    childrenArray.[index] <- unit.Length - 1 :: childrenArray.[index]
+                    parentsArray.[unit.Length - 1] <- index :: parentsArray.[unit.Length - 1]
+                |QuadEndUnit _ -> 
+                    childrenArray.[index] <- [-1]
+                |_ ->
+                    childrenArray.[index] <- index + 1 :: childrenArray.[index]
+                    parentsArray.[index+1] <- index :: parentsArray.[index+1]
+        match List.rev code.block.quads with
         |[] ->
             failwith "empty block???"
         |h::t ->
             getChildren h
+    parentsArray.[0] <- [-1]
     List.iter func unit
-    let rec helper i (cUnit:blockWithIdType list) acc =
-        match cUnit with
+    let rec helper i (cBlock:blockWithIdType list) acc =
+        match cBlock with
         |[] ->
             List.rev acc
         |h::t ->
 //Junk block elimination optimizing version
             if parentsArray.[h.name] <> [] then
+                //printfn "id=%d, parents = %A, children = %A" i parentsArray.[i] childrenArray.[i]
+                match acc with
+                | hacc::tacc ->
+                    let previousCode = hacc.block.quads |> List.toArray
+                    if previousCode.[previousCode.Length - 1].quad = QuadJump (ref h.id) then
+                        hacc.block.quads <- [for i=0 to (previousCode.Length - 2) do yield previousCode.[i]]
+                | _ -> ()
                 helper (i+1) t ({ 
                                     id = i; 
                                     predecessors = parentsArray.[i]; 

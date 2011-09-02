@@ -73,8 +73,11 @@ module Compiler=
     let inline printFinal final =
         [codeHead ()]::(UnitList.map finalType.print final) @ [codeTail ()]
     let inline printResult unitList =
+        //printfn "ma kai do"
+        //printfn "%A" unitList
         UnitList.iter (fun (str:string) -> output.WriteLine(str)) unitList
         output.Flush()
+    open Block
     let inline printBlocks (unitlist:blockWithIdType list) =
         List.map (fun (block:blockWithIdType) -> 
                        "BlockName "+ block.name.ToString() + " , Id = " + block.id.ToString() 
@@ -90,13 +93,14 @@ module Compiler=
                       :: List.map quadWithIndexType.print graphNode.block.quads
                       @ [""]
                  ) graph
+        //|> (fun x -> printfn "%A" x; x) 
 
 let main () =
     let inputFileCandidate = ref ""
     let outputFileCandidate = ref ""
     let produceFinal = ref true
     let optimizeFlag = ref false
-    let debugFlags = [|"Blocks";"SimpleOpts";"ControlGraph"|]
+    let debugFlags = [|"Blocks";"SimpleOpts";"ControlGraph";"SimpleOpts+ControlGraph";"SimplifyBlocks"|]
     let debugMode = ref "" 
     let specs =
         [
@@ -124,11 +128,15 @@ let main () =
             intermediate |> if !debugMode <> "" then
                                 match !debugMode with
                                 |"SimpleOpts" ->
-                                    simpleBackwardPropagation >> (List.iter (makeBasicBlocksOfUnit >> List.map (constantFolding) >> Compiler.printBlocks >> Compiler.printResult))
+                                    simpleBackwardPropagation >> (List.iter (Block.makeBasicBlocksOfUnit >> List.map (constantFolding) >> Compiler.printBlocks >> Compiler.printResult))
                                 |"Blocks" ->
-                                    (List.iter (makeBasicBlocksOfUnit >> Compiler.printBlocks >> Compiler.printResult))
+                                    (List.iter (Block.makeBasicBlocksOfUnit >> Compiler.printBlocks >> Compiler.printResult))
+                                |"SimplifyBlocks" ->
+                                    simpleBackwardPropagation >> (List.iter (Block.makeBasicBlocksOfUnit >> List.map (constantFolding) >> shortenJumpPaths >> Compiler.printBlocks >> Compiler.printResult))
                                 |"ControlGraph" ->
-                                    (List.iter (makeBasicBlocksOfUnit >> makeControlFlowGraphOfUnit >> Compiler.printControlFlowGraph >> Compiler.printResult))
+                                    (List.iter (Block.makeBasicBlocksOfUnit >> makeControlFlowGraphOfUnit >> Compiler.printControlFlowGraph >> Compiler.printResult))
+                                |"SimpleOpts+ControlGraph" ->
+                                    simpleBackwardPropagation >> (List.iter (Block.makeBasicBlocksOfUnit >> List.map (constantFolding) >> shortenJumpPaths >> makeControlFlowGraphOfUnit >> Compiler.printControlFlowGraph >> Compiler.printResult))
                                 |_ ->
                                     eprintfn "Not Implemented"
                                     ignore

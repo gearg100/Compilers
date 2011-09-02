@@ -2,7 +2,7 @@
 open Types
 open Error
 open Identifier
-open Microsoft.FSharp.Collections
+open System.Collections.Generic
 
 type pass_mode = 
     |PASS_BY_VALUE 
@@ -14,7 +14,6 @@ type pass_mode =
         |PASS_BY_REFERENCE -> "R"
         |RET -> "RET"
 type param_status = PARDEF_COMPLETE | PARDEF_DEFINE | PARDEF_CHECK
-
 type scope = {
     sco_parent : scope option
     sco_nesting : int
@@ -38,6 +37,8 @@ and function_info = {
     mutable function_initquad  : int
     mutable function_negoffs   : int
     mutable function_posoffs   : int
+    mutable function_mutatesForeignBytes : bool
+    mutable function_mutatesForeignInts : bool
 }
 
 and parameter_info = {
@@ -57,6 +58,17 @@ and entry_info =
     | ENTRY_function of function_info
     | ENTRY_parameter of parameter_info
     | ENTRY_temporary of temporary_info
+
+and [<CustomEqualityAttribute>] [<NoComparisonAttribute>] entry =
+    {
+    entry_id    : id
+    entry_scope : scope
+    entry_info  : entry_info       
+    }   
+    override x.Equals(e:obj) =
+        System.Object.ReferenceEquals(x:>obj, e)
+    override x.GetHashCode() =
+        x.entry_id.GetHashCode()
     static member GetType (entry:entry) =
         match entry.entry_info with
         | ENTRY_none -> 
@@ -69,12 +81,30 @@ and entry_info =
             p.parameter_type
         | ENTRY_temporary t -> 
             t.temporary_type
+    static member GetKind (e:entry) =
+        match e.entry_info with
+        | ENTRY_none -> 
+            "nothing"
+        | ENTRY_variable v-> 
+            "variable"
+        | ENTRY_function f-> 
+            "function"
+        | ENTRY_parameter p -> 
+            "parameter"
+        | ENTRY_temporary t -> 
+            "temporary"
+    override x.ToString() = 
+        "{ id = (" + x.entry_id.node + "," + x.entry_id.tag.ToString() +
+        "), kind = " + entry.GetKind x +
+        ", type = " + sprintf "%A" (entry.GetType x) +
+        ", nesting level = " + x.entry_scope.sco_nesting.ToString() + " }"
 
-and entry = {
-    entry_id    : id
-    entry_scope : scope
-    entry_info  : entry_info       
-}
+and entryWithTypeAndNesting =
+    {
+    entry : entry
+    usageNest :int
+    entryType : typ
+    }
 
 type lookup_type = LOOKUP_CURRENT_SCOPE | LOOKUP_ALL_SCOPES
 
@@ -210,6 +240,8 @@ let newFunction id err nameMode=
                     function_initquad  = 0
                     function_posoffs   = 0
                     function_negoffs   = 0
+                    function_mutatesForeignBytes = false
+                    function_mutatesForeignInts = false
                 } 
         newEntry id (ENTRY_function inf) false
 

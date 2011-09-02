@@ -22,6 +22,8 @@ let localFunctionRegistry = new Stack<string>()
 
 let usedLibraryFunctionRegistry = new HashSet<string>() 
 
+let inline getNestingDiff e = e.usageNest - e.entry.entry_scope.sco_nesting
+
 let inline localSize (e:entry) =
     match e.entry_info with
     |ENTRY_function f -> f.function_negoffs |>int16
@@ -50,9 +52,9 @@ let rec load R a =
         [Mov (Register R, Const (int16 c))]
     |String(lst,str)->    
         internal_error (__SOURCE_FILE__,__LINE__) "Cannot Load a String in a register"
-    |Entry(ent,typ,nest) -> 
-        let (size, offset, mode) = entry.GetSizeOffsetMode ent
-        match (nest, mode) with
+    |Entry e -> 
+        let (size, offset, mode) = entry.GetSizeOffsetMode e.entry
+        match (getNestingDiff e, mode) with
         |(0,PASS_BY_REFERENCE)|(0,RET) ->
             [
                 Mov (Register SI,Indirect (BP,"word",offset));
@@ -63,45 +65,45 @@ let rec load R a =
                 Mov (Register R,Indirect (BP,size,offset))
             ]
         |(n,PASS_BY_REFERENCE)|(n,RET) ->
-            (getAR nest) @  [
-                                Mov (Register SI, Indirect (SI,"word",offset));
-                                Mov (Register R, Indirect (SI,size,0))
-                            ]
+            (getAR <| getNestingDiff e) @ [
+                                            Mov (Register SI, Indirect (SI,"word",offset));
+                                            Mov (Register R, Indirect (SI,size,0))
+                                        ]
         |(n, PASS_BY_VALUE) ->
-            (getAR nest) @  [ 
-                                Mov (Register R, Indirect (SI,size,offset))
-                            ]
-    |Valof (ent,typ,nest) ->
-        let size = sizeof typ
+            (getAR <| getNestingDiff e) @ [ 
+                                            Mov (Register R, Indirect (SI,size,offset))
+                                        ]
+    |Valof e ->
+        let size = sizeof e.entryType
         List.concat [  
-                        load DI (Entry (ent,typ,nest));
+                        load DI (Entry e);
                         [Mov (Register R, Indirect (DI,size,0))]
                     ]
 
 let inline loadAddr R a =
     match a with
-    |Entry(ent,typ,nest) ->
-        let (size, offset, mode) = entry.GetSizeOffsetMode ent
-        match (nest, mode) with
+    |Entry(e) ->
+        let (size, offset, mode) = entry.GetSizeOffsetMode e.entry
+        match (getNestingDiff e, mode) with
         |(0,PASS_BY_REFERENCE)|(0,RET) ->
             [Mov (Register R,Indirect (BP,"word",offset))]
         |(0,PASS_BY_VALUE) ->
             [Lea (Register R, Indirect (BP,size,offset))]
         |(n,PASS_BY_REFERENCE)|(n,RET) ->
-            (getAR nest)@[Mov (Register R, Indirect (SI,size,offset))]
+            (getAR <| getNestingDiff e)@[Mov (Register R, Indirect (SI,size,offset))]
         |(n, PASS_BY_VALUE) ->
-            (getAR nest)@[Lea (Register R, Indirect (SI,"word",offset))]
-    |Valof (e,typ,nest) ->
-        load R (Entry (e,typ,nest))
+            (getAR <| getNestingDiff e)@[Lea (Register R, Indirect (SI,"word",offset))]
+    |Valof e ->
+        load R (Entry e)
     |String (l,s) ->
         [Lea (Register R,Identifier ("byte ptr " + addString (l,s)))]
     | _ -> internal_error (__SOURCE_FILE__,__LINE__) "invalid a"
 
 let inline store R a =
     match a with
-    |Entry(ent,typ,nest) ->
-        let (size, offset, mode) = entry.GetSizeOffsetMode ent
-        match (nest, mode) with
+    |Entry(e) ->
+        let (size, offset, mode) = entry.GetSizeOffsetMode e.entry
+        match (getNestingDiff e, mode) with
         |(0,PASS_BY_REFERENCE)|(0,RET) ->
             [   
                 Mov (Register SI,Indirect (BP,"word",offset));
@@ -112,18 +114,18 @@ let inline store R a =
                 Mov (Indirect (BP,size,offset),Register R)
             ]
         |(n,PASS_BY_REFERENCE)|(n,RET) ->
-            (getAR nest) @  [ 
+            (getAR <| getNestingDiff e) @  [ 
                                 Mov (Register SI, Indirect (SI,"word",offset));
                                 Mov (Indirect (SI,size,0),Register R)
                             ]
         |(n, PASS_BY_VALUE) ->
-            (getAR nest) @  [ 
+            (getAR <| getNestingDiff e) @  [ 
                                 Mov (Indirect (SI,size,offset),Register R)
                             ]
-    |Valof (ent,typ,nest) ->
-        let size = sizeof typ
+    |Valof e ->
+        let size = sizeof e.entryType
         List.concat [  
-                        load DI (Entry (ent,typ,nest));
+                        load DI (Entry e);
                         [Mov (Indirect (DI,size,0), Register R)]
                     ]
     |_ -> internal_error (__SOURCE_FILE__,__LINE__) "cannot store to a constant"
@@ -212,17 +214,17 @@ let inline QuadtoFinal (item:quadWithIndexType) (labelRegistry:HashSet<int>) =
         |QuadAssign(a,e) ->
             let ar,_ = chooseRegister a QNone
             (load ar a)@(store ar e)
-        |QuadArray((e1,t1,n1), a, (e2,t2,n2)) ->
+        |QuadArray(e1, a, e2) ->
             let size =
-                match t1 with
+                match e1.entryType with
                 |TYPE_array (t,s) -> sizeOfType t
                 |_ -> internal_error (__SOURCE_FILE__,__LINE__) "not an array"
             List.concat [
                             load AX (a);
                             [Mov (Register CX, Const size);IMul CX];
-                            loadAddr CX (Entry(e1,t1,n1));
+                            loadAddr CX (Entry(e1));
                             [Add (Register AX,Register CX)];
-                            store AX (Entry (e2,t2,n2))
+                            store AX (Entry (e2))
                         ]
         |QuadEQ(a,b,i1,i2) ->
             Condition a b i1 i2 "je "
@@ -238,13 +240,13 @@ let inline QuadtoFinal (item:quadWithIndexType) (labelRegistry:HashSet<int>) =
             Condition a b i1 i2"jle "
         |QuadJump i ->
             [Jump (sprintf "@label%d" !i)]
-        |QuadCall (e,t,n) ->
-            let fn = "_" + entry.GetUniqueID e
+        |QuadCall (f,_) ->
+            let fn = "_" + entry.GetUniqueID f.entry
             if localFunctionRegistry.Contains fn |> not then usedLibraryFunctionRegistry.Add fn |>ignore
             let temp=
-                (updateAL n) @
-                [Call fn; Add (Register SP, Const  (parameterSize e + 4s))]
-            if t =TYPE_proc then (Sub (Register SP,Const 2s))::temp else temp
+                (updateAL <| getNestingDiff f) @
+                [Call fn; Add (Register SP, Const  (parameterSize f.entry + 4s))]
+            if f.entryType =TYPE_proc then (Sub (Register SP,Const 2s))::temp else temp
         |QuadPar(a, mode) ->
             match (quadElementType.GetType a) with
             |TYPE_int when mode = PASS_BY_VALUE ->

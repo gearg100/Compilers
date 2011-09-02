@@ -15,7 +15,14 @@ let inline EHandler (ctxt: ParseErrorContext<_>) =
     let p=(ctxt.ParseState.InputStartPosition(1).Line,ctxt.ParseState.InputStartPosition(1).Column)
     (error "Syntax Error at %A: Unrecognized Syntax Error\n" p )
 let inline getScopeFunction () = (!currentScope).sco_function.Value
-let inline getNestingInfo (e:entry) = (!currentScope).sco_nesting - e.entry_scope.sco_nesting
+let inline setScopeFunctionsByteMutationFlag () = 
+    let (ENTRY_function finfo) = getScopeFunction().entry_info
+    finfo.function_mutatesForeignBytes <- true
+let inline setScopeFunctionsIntMutationFlag () = 
+    let (ENTRY_function finfo) = getScopeFunction().entry_info
+    finfo.function_mutatesForeignInts <- true
+let inline getScopeNesting () = (!currentScope).sco_nesting
+let inline getEntryType e = entry.GetType e
 let inline getReturnType f =
     match f.entry_info with
     |ENTRY_function x -> 
@@ -23,6 +30,8 @@ let inline getReturnType f =
     |_ ->
         internal_error (__SOURCE_FILE__,__LINE__) "Not A Function"
         raise Terminate 
+//let inline getNestingInfo (e:entry) = (!currentScope).sco_nesting - e.entry_scope.sco_nesting
+
 let inline checkCondSemantics x1 x2 (state:IParseState) txt =
     if (x1=x2) then true
                else let (ps,pe)=state.ResultRange
@@ -88,7 +97,7 @@ let inline checkStmtSemantics (state:IParseState) x1 x2 txt =
         let (ps,pe)=state.ResultRange
         error txt (ps.Line,ps.Column) (pe.Line,pe.Column) false
 let inline checkReturnSemantics (state:IParseState) typ  =
-    let t = () |> getScopeFunction |> getReturnType
+    let t = getScopeFunction >> getReturnType <| ()
     if (t = typ) then 
         true 
     else 
@@ -102,8 +111,11 @@ let inline processAssignment (state:IParseState) (l:expressionType) (e:expressio
     if (checkStmtSemantics state t1 t2 "Semantic Error at %A - %A: Type Mismatch1\n")
     then 
         match l.Place with
-        |Entry _ | Valof _ -> 
-            (QuadAssign(e.Place,l.Place))::l.Code@e.Code
+        |Entry ent |Valof ent ->
+            if ent.entry.entry_scope.sco_nesting <> (!currentScope).sco_nesting then
+                if ent.entryType = TYPE_int then setScopeFunctionsIntMutationFlag()
+                elif ent.entryType = TYPE_byte then setScopeFunctionsByteMutationFlag()
+            QuadAssign(e.Place,l.Place)::l.Code@e.Code
         |_ -> 
             internal_error (__SOURCE_FILE__,__LINE__) "Not an Entry"
             raise Terminate
@@ -144,8 +156,9 @@ let inline processReturnExpressionStmt (state:IParseState) (expression:expressio
         |> checkReturnSemantics state)
     then 
         match (lookupEntry (id_make "$$") LOOKUP_CURRENT_SCOPE true) with
-        |Some entry ->
-            (QuadRet (!currentScope).sco_function.Value)::QuadAssign(expression.Place,Entry (entry,entry_info.GetType entry,getNestingInfo entry))::expression.Code
+        |Some ent ->
+            let e = { entry = ent; entryType = getEntryType ent; usageNest = getScopeNesting () }
+            (QuadRet (!currentScope).sco_function.Value)::QuadAssign(expression.Place,Entry e)::expression.Code
         |None ->
             []
     else
@@ -184,10 +197,28 @@ let inline processFunctionCall (state:IParseState) id (paramList:parameterList) 
         printf "ERROR"; voidExpression
     let inline createParameterCode acc expression (_,passMode) =
         (acc@(QuadPar(expression.Place,passMode) :: (expression.Code)))
+    let inline getRefParameters f parlst typandmodelst=
+        let paramSet = new System.Collections.Generic.HashSet<entryWithTypeAndNesting>()
+        List.iter2 (fun (expr:expressionType) (_,mode) ->
+            if mode = PASS_BY_REFERENCE then
+                match expr.Place with
+                | Entry e ->
+                    paramSet.Add e |>ignore
+                | Valof _ ->
+                    let (QuadArray (ar,_,_)) = expr.Code.Head
+                    if ar.usageNest <> ar.entry.entry_scope.sco_nesting then
+                        let (TYPE_array(t,_)) = ar.entryType
+                        if t = TYPE_int then f.function_mutatesForeignInts <- true
+                        elif t = TYPE_byte then f.function_mutatesForeignBytes <- true
+                | _ ->
+                    ()) parlst.expressionList typandmodelst
+        paramSet
     match e with
     |Some entry->
         match entry.entry_info with
         |ENTRY_function f ->
+            if f.function_mutatesForeignBytes then setScopeFunctionsByteMutationFlag()
+            elif f.function_mutatesForeignBytes then setScopeFunctionsIntMutationFlag()
             match f.function_result with
             |TYPE_proc ->
                 let actualTypeAndMode = 
@@ -199,8 +230,9 @@ let inline processFunctionCall (state:IParseState) id (paramList:parameterList) 
                     let code = 
                         List.fold2 createParameterCode [] (expressionList) (expectedTypeAndMode)
                     let z = 
+                        let fn = { entry = entry; entryType = TYPE_proc; usageNest = getScopeNesting () - 1 }
                         {
-                            Code = QuadCall(entry, TYPE_proc, getNestingInfo entry - 1)::code
+                            Code = QuadCall(fn, getRefParameters f paramList expectedTypeAndMode)::code
                             Place = QNone
                         }
                     z
@@ -217,9 +249,11 @@ let inline processFunctionCall (state:IParseState) id (paramList:parameterList) 
                         List.fold2 createParameterCode [] expressionList (expectedTypeAndMode.Tail)
                     let temp = newTemporary resultType
                     let z = 
+                        let fn = { entry = entry; entryType = resultType; usageNest = getScopeNesting () - 1 }
+                        let tmp = { entry = temp; entryType = resultType; usageNest = getScopeNesting () }
                         {
-                            Code = QuadCall(entry, resultType, getNestingInfo entry - 1)::QuadPar ( Entry(temp,resultType,getNestingInfo temp) , RET)::code
-                            Place = Entry(temp,resultType,getNestingInfo temp)
+                            Code = QuadCall(fn,getRefParameters f paramList expectedTypeAndMode.Tail)::QuadPar ( Entry(tmp) , RET)::code
+                            Place = Entry(tmp)
                         }
                     z
                 else
@@ -246,9 +280,10 @@ let inline processLValue1 (state:IParseState) id =
     let p,e = FindPosAndEntry state id
     match e with
     |Some entry->
+        let e = { entry = entry; entryType = getVariableOrParameterType entry p ;usageNest = getScopeNesting () }
         {
             Code = []
-            Place = Entry(entry,getVariableOrParameterType entry p,getNestingInfo entry)
+            Place = Entry(e)
         }
     |None ->
         error "undeclared variable" |> ignore;
@@ -257,12 +292,13 @@ let inline processLValue1 (state:IParseState) id =
 let inline processLValue2 (state:IParseState) id =
     let p,e = FindPosAndEntry state id
     match e with
-    |Some entry->    
+    |Some entry->
         match getVariableOrParameterType entry p with
         |TYPE_int|TYPE_byte as typ->
+            let e = { entry = entry; entryType = typ ;usageNest = getScopeNesting () }
             {
                 Code = []
-                Place = Entry(entry,typ,getNestingInfo entry)
+                Place = Entry(e)
             }
         |_ ->
             error "Semantic Error at %A: type mismatch: LValue neither Int nor Byte\n" p
@@ -273,15 +309,17 @@ let inline processLValue2 (state:IParseState) id =
 
 let inline processLValue3 (state:IParseState) id (index : expressionType)=
     let p,e = FindPosAndEntry state id
-    let tOfIndex = (index.Place |> quadElementType.GetType)
+    let tOfIndex = index.Place |> quadElementType.GetType
     match e with
     |Some entry->
         match getVariableOrParameterType entry p with
         |TYPE_array (typ,_) as arrayType when tOfIndex=TYPE_int -> 
             let temp = newTemporary TYPE_int
+            let ar = { entry = entry; entryType = arrayType ;usageNest = getScopeNesting () }
+            let tmp = { entry = temp; entryType = typ; usageNest = getScopeNesting () }
             {
-                Code = (QuadArray((entry,arrayType,getNestingInfo entry), index.Place, (temp,typ,getNestingInfo temp)) :: index.Code)
-                Place = Valof(temp,typ,getNestingInfo temp)
+                Code = (QuadArray(ar, index.Place, tmp) :: index.Code)
+                Place = Valof(tmp)
             }
         |TYPE_array _ as arrayType->
             error "Semantic Error at %A: type mismatch: Invalid Array Index type = %A\n" p arrayType
@@ -304,11 +342,6 @@ let inline checkExprSemantics op x1 x2 (state:IParseState) txt =
         false
 
 let inline processLValueExpression (state:IParseState) (l:expressionType) =
-    (*match l.Code with
-    |[] -> l
-    |QuadArray(_,_,p)::_ ->
-        l
-    | _ -> l*)
     l
 
 let inline processFunctionCallExpression (state:IParseState) f =
@@ -317,13 +350,14 @@ let inline processFunctionCallExpression (state:IParseState) f =
     then f else printf "ERROR"; voidExpression
 
 let inline processUnExpression (state:IParseState) (op) (e:expressionType) =
-    let t = (e.Place |> quadElementType.GetType)
-    if (checkExprSemantics (=) t TYPE_int state "Semantic Error at %A - %A: Invalid use of Unary Operator\n") 
+    let typ = (e.Place |> quadElementType.GetType)
+    if (checkExprSemantics (=) typ TYPE_int state "Semantic Error at %A - %A: Invalid use of Unary Operator\n") 
     then
-        let temp = newTemporary t
+        let temp = newTemporary typ
+        let tmp = { entry = temp; entryType = typ; usageNest = getScopeNesting () }
         { 
-            Code = (op(e.Place, (temp,t,getNestingInfo temp) ) :: e.Code)
-            Place = Entry(temp,t,getNestingInfo temp)
+            Code = (op(e.Place, tmp) :: e.Code)
+            Place = Entry(tmp)
         }
     else
         printf "ERROR"; voidExpression
@@ -334,9 +368,10 @@ let inline processBinExpression (state:IParseState) (op) (e1:expressionType) (e2
     if (checkExprSemantics (=) t2 t1 state "Semantic Error at %A - %A: Type Mismatch3\n") 
     then 
         let temp = newTemporary t1
+        let tmp = { entry = temp; entryType = t1; usageNest = getScopeNesting () }
         { 
-            Code = (op(e1.Place, e2.Place, (temp,t1,getNestingInfo temp)) :: (e2.Code @ e1.Code))
-            Place = Entry(temp,t1,getNestingInfo temp)
+            Code = (op(e1.Place, e2.Place, tmp) :: (e2.Code @ e1.Code))
+            Place = Entry(tmp)
         }
     else
         printf "ERROR"; voidExpression
@@ -358,7 +393,7 @@ let inline processComparison (state:IParseState) (op) (e1:expressionType) (e2:ex
     then
         let True, False = ref 1, ref 1
         {
-            Code    = (op(e1.Place, e2.Place, True, False))::e2.Code@e1.Code//op(e1.Place, e2.Place, False)::e2.Code@e1.Code
+            Code    = op(e1.Place, e2.Place, True, False)::e2.Code@e1.Code
             True    = [True]
             False   = [False]
         }
