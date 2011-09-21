@@ -17,6 +17,18 @@ module UnitList =
     let inline iteri initValue f (unitList: 'a list list) =
         let i = ref (initValue-1)
         List.iter (List.iter (fun quad -> incr i; f !i quad)) unitList
+    let inline flatten f (unitList: 'a list) =
+        let rec flattenHelper nodeList currentNode acc =
+            match currentNode with
+            |[] -> 
+                match nodeList with
+                |[] ->
+                    List.rev acc
+                |h::t ->
+                    flattenHelper t (f h) acc
+            |h::t ->
+                flattenHelper nodeList t (h::acc)
+        flattenHelper unitList [] []
 
 module Block =
     type blockType =
@@ -102,6 +114,9 @@ module Block =
                     makeBasicBlocksOfUnitHelper t (h::acc) unitAcc
         makeBasicBlocksOfUnitHelper unit.Tail [] [makeBlock [unit.Head]]
 
+    let inline flattenGraphOfUnit graph =
+        UnitList.flatten (fun node -> node.block.quads) graph
+
 module List =
     let inline take n lst =
         Seq.take n lst |> Seq.toList
@@ -115,7 +130,7 @@ let inline codeCleanUp (code:quadType list list) =
                                     true)) code
 
 //Some Simple Optimizations
-let inline simpleBackwardPropagation (code:quadWithIndexType list list) =
+let inline simpleBackwardPropagation (unit:quadWithIndexType list) =
     let rec simpleBackwardPropagationHelper acc (quadList:quadWithIndexType list) =
         match quadList with
         |[]->
@@ -131,7 +146,7 @@ let inline simpleBackwardPropagation (code:quadWithIndexType list list) =
                     simpleBackwardPropagationHelper (h1::acc) (h2::t) 
             match h1.quad with
             |QuadAdd(q1,q2,e) ->
-                checkAndContinue QuadSub q1 q2 e
+                checkAndContinue QuadAdd q1 q2 e
             |QuadSub(q1,q2,e) ->
                 checkAndContinue QuadSub q1 q2 e
             |QuadMult(q1,q2,e) ->
@@ -146,15 +161,15 @@ let inline simpleBackwardPropagation (code:quadWithIndexType list list) =
                     simpleBackwardPropagationHelper ({ index = h2.index-1; quad = QuadNeg(q1,e2) }::acc) t 
                 |_ -> 
                     simpleBackwardPropagationHelper (h1::acc) (h2::t) 
-            |QuadAssign(e11,e21) ->
+            (*|QuadAssign(e11,e21) ->
                 match h2.quad with
                 |QuadAssign(e12,e22) when e21=e12->
                     simpleBackwardPropagationHelper ({ index = h2.index-1; quad = QuadAssign(e11,e22) }::acc) t
                 |_ -> 
-                    simpleBackwardPropagationHelper (h1::acc) (h2::t) 
+                    simpleBackwardPropagationHelper (h1::acc) (h2::t) *)
             |_ ->
                 simpleBackwardPropagationHelper (h1::acc) (h2::t) 
-    List.map (simpleBackwardPropagationHelper []) code
+    simpleBackwardPropagationHelper [] unit
 
 open Block
 type intOpType = System.Int16->System.Int16->System.Int16
@@ -334,17 +349,17 @@ let constantFolding (block:blockWithIdType) =
                     ()
                 h :: acc
             |QuadAssign (a,s) ->
-                match quadElementType.GetType s with
+                match quadElementType.GetType a with
                 |TYPE_int ->
-                    match tryGetIntConstant s with
+                    match tryGetIntConstant a with
                     |Some c ->
-                        h.quad <- QuadAssign(a,Int c)
+                        h.quad <- QuadAssign(Int c,s)
                     |None ->
                         ()
                 |TYPE_byte ->
-                    match tryGetByteConstant s with
+                    match tryGetByteConstant a with
                     |Some c ->
-                        h.quad <- QuadAssign(a,Byte c)
+                        h.quad <- QuadAssign(Byte c,s)
                     |None ->
                         ()
                 |_-> failwith "wtf"
@@ -464,7 +479,10 @@ let makeControlFlowGraphOfUnit (unit:blockWithIdType list) =
                 helper (i+1) t acc
     helper 0 unit []
 
-let inline optimizeIntermediate unitList = 
-    unitList
-    |> simpleBackwardPropagation
-//    |> makeBasicBlocksOfUnit
+let optimizeIntermediate = 
+    List.map ( simpleBackwardPropagation 
+            >> makeBasicBlocksOfUnit
+            >> List.map (constantFolding) 
+            >> shortenJumpPaths 
+            >> makeControlFlowGraphOfUnit 
+            >> flattenGraphOfUnit)
