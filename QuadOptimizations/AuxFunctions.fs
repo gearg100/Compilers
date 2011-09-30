@@ -29,8 +29,7 @@ let inline getReturnType f =
         x.function_result
     |_ ->
         internal_error (__SOURCE_FILE__,__LINE__) "Not A Function"
-        raise Terminate 
-//let inline getNestingInfo (e:entry) = (!currentScope).sco_nesting - e.entry_scope.sco_nesting
+        raise Terminate
 
 let inline checkCondSemantics x1 x2 (state:IParseState) txt =
     if (x1=x2) then true
@@ -112,7 +111,7 @@ let inline processAssignment (state:IParseState) (l:expressionType) (e:expressio
     then 
         match l.Place with
         |Entry ent |Valof ent ->
-            if ent.entry.entry_scope.sco_nesting <> (!currentScope).sco_nesting then
+            if ent.entry.entry_scope.sco_nesting <> getScopeNesting () then
                 if ent.entryType = TYPE_int then setScopeFunctionsIntMutationFlag()
                 elif ent.entryType = TYPE_byte then setScopeFunctionsByteMutationFlag()
             QuadAssign(e.Place,l.Place)::l.Code@e.Code
@@ -185,9 +184,99 @@ let inline checkParameters flag e p =
     |(t1,p1),(t2,p2) when t1==t2 && (if p1=PASS_BY_REFERENCE then (p1=p2) else true)->flag
     |_ ->false  
 
+let inline processFunctionCallnew (state:IParseState) id (paramList:parameterListnew) =
+    let p,e = FindPosAndEntry state id
+    let paramSet = new System.Collections.Generic.HashSet<entryWithTypeAndNesting>()
+    let inline CheckAndCreateParameterCode (actualParList:parameterListnew) (parList:entry list) resultType func=
+        let rec createParameterCodeHelper actual expected acc =
+            match actual, expected with 
+            |[],[] when resultType = TYPE_proc ->
+                Some acc
+            |[],[e] when let (ENTRY_parameter p) = e.entry_info in p.parameter_mode = RET && resultType == p.parameter_type ->
+                Some acc 
+            |((expression,mode)::t1),(expectedParameter::t2) ->
+                let actualType, actualMode = quadElementType.GetType expression.Place, mode
+                let (ENTRY_parameter p) = expectedParameter.entry_info
+                let expectedType, expectedMode = p.parameter_type, p.parameter_mode
+                if actualType == expectedType && (expectedMode = PASS_BY_VALUE || actualMode = expectedMode)
+                then
+                    if expectedMode = PASS_BY_REFERENCE then
+                        match expression.Place with
+                        | Entry e -> paramSet.Add e |>ignore
+                        | _ -> ()
+                    createParameterCodeHelper t1 t2 (acc @ (QuadPar(expression.Place,expectedMode) :: (expression.Code)))
+                else
+                    None
+            | _,_ -> 
+                None
+        let codeOption = createParameterCodeHelper (List.rev actualParList) parList []
+        match codeOption with
+        |Some code ->
+            func code
+        |None ->
+            let inline getActualTypeAndMode (parList:parameterListnew) resultType =
+                let rec getActualTypeAndModeHelper rest acc=
+                    match rest with
+                    |[] -> 
+                        acc
+                    |(expr,mode)::t ->
+                        getActualTypeAndModeHelper t ((quadElementType.GetType expr.Place, mode) :: acc)
+                getActualTypeAndModeHelper parList (if resultType = TYPE_proc then [] else [resultType,RET])
+            let inline getExpectedTypeAndMode (parList:entry list) =
+                List.map (fun param -> 
+                            match param.entry_info with
+                            |ENTRY_parameter p -> 
+                                (p.parameter_type,p.parameter_mode)
+                            |_ -> 
+                                internal_error (__SOURCE_FILE__,__LINE__) "Not a Parameter"
+                                raise Terminate) parList
+            let inline errorcase exp act = 
+                if paramList =[] then 
+                    error "Semantic Error at %A: Parameter Mismatch:\n\t Expected Parameter List=%A \n\t Given empty Parameter List\n" p exp
+                else
+                    error "Semantic Error at %A: Parameter Mismatch:\n\t Expected Parameter List = %A \n\t Actual Parameter List = %A\n" p exp act
+                printf "ERROR"; voidExpression
+            let actualTypeAndMode = 
+                getActualTypeAndMode paramList resultType
+            let expectedTypeAndMode = 
+                getExpectedTypeAndMode parList
+            errorcase expectedTypeAndMode actualTypeAndMode
+    match e with
+    |Some entry->
+        match entry.entry_info with
+        |ENTRY_function f ->
+            if f.function_mutatesForeignBytes then setScopeFunctionsByteMutationFlag()
+            elif f.function_mutatesForeignBytes then setScopeFunctionsIntMutationFlag()
+            match f.function_result with
+            |TYPE_proc ->
+                CheckAndCreateParameterCode paramList f.function_paramlist f.function_result
+                    (fun code ->
+                        let fn = { entry = entry; entryType = TYPE_proc; usageNest = getScopeNesting () - 1 }
+                        {
+                            Code = QuadCall(fn, paramSet)::code
+                            Place = QNone
+                        })
+            |TYPE_int|TYPE_byte as resultType->
+                CheckAndCreateParameterCode paramList f.function_paramlist f.function_result
+                    (fun code ->
+                        let temp = newTemporary resultType
+                        let fn = { entry = entry; entryType = resultType; usageNest = getScopeNesting () - 1 }
+                        let tmp = { entry = temp; entryType = resultType; usageNest = getScopeNesting () }
+                        {
+                            Code = QuadCall(fn,paramSet)::QuadPar ( Entry(tmp) , RET)::code
+                            Place = Entry(tmp)
+                        })
+            |_ -> error "Semantic Error at %A: wtf\n" p
+        |_ ->
+             error "Semantic Error at %A: Given name is not a Function\n" p
+             printf "ERROR"; voidExpression
+    |None -> 
+        error "undeclared Identifier"
+        printf "ERROR"; voidExpression 
+
 let inline processFunctionCall (state:IParseState) id (paramList:parameterList) =
     let expressionList = paramList.expressionList
-    let modeList = paramList.modeList
+    let modeList = paramList.modeList   
     let p,e = FindPosAndEntry state id
     let inline errorcase exp act = 
         if expressionList =[] then 
