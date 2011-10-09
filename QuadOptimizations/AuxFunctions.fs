@@ -9,6 +9,7 @@ open QuadSupport
 open Microsoft.FSharp.Text.Lexing
 open Microsoft.FSharp.Text.Parsing
 
+#nowarn "25"
 let inline lexeme () = LexBuffer<char>.LexemeString
 let inline FindPosition (state:IParseState) = (state.InputStartPosition(1).Line,state.InputStartPosition(1).Column)
 let inline EHandler (ctxt: ParseErrorContext<_>) = 
@@ -30,7 +31,6 @@ let inline getReturnType f =
     |_ ->
         internal_error (__SOURCE_FILE__,__LINE__) "Not A Function"
         raise Terminate
-
 let inline checkCondSemantics x1 x2 (state:IParseState) txt =
     if (x1=x2) then true
                else let (ps,pe)=state.ResultRange
@@ -69,7 +69,7 @@ let LibraryFunctions = [
     ("strcat"      ,[("catd",TYPE_array (TYPE_byte,-1s),PASS_BY_REFERENCE)
                     ;("cats",TYPE_array (TYPE_byte,-1s),PASS_BY_REFERENCE)],TYPE_proc);
                        ]
-
+#warn "25"
 let inline bulkLoad (fName,parameterList,fType) = 
     let f = newFunction (id_make fName) true false
     openScope (Some f)
@@ -190,10 +190,8 @@ let inline processFunctionCallnew (state:IParseState) id (paramList:parameterLis
     let inline CheckAndCreateParameterCode (actualParList:parameterListnew) (parList:entry list) resultType func=
         let rec createParameterCodeHelper actual expected acc =
             match actual, expected with 
-            |[],[] when resultType = TYPE_proc ->
+            |[],[] ->
                 Some acc
-            |[],[e] when let (ENTRY_parameter p) = e.entry_info in p.parameter_mode = RET && resultType == p.parameter_type ->
-                Some acc 
             |((expression,mode)::t1),(expectedParameter::t2) ->
                 let actualType, actualMode = quadElementType.GetType expression.Place, mode
                 let (ENTRY_parameter p) = expectedParameter.entry_info
@@ -209,7 +207,12 @@ let inline processFunctionCallnew (state:IParseState) id (paramList:parameterLis
                     None
             | _,_ -> 
                 None
-        let codeOption = createParameterCodeHelper (List.rev actualParList) parList []
+        let codeOption = 
+            match parList with 
+            |e::_ when let (ENTRY_parameter p) = e.entry_info in p.parameter_mode = RET && resultType == p.parameter_type ->
+                createParameterCodeHelper actualParList parList.Tail []
+            | _ -> 
+                createParameterCodeHelper actualParList parList []
         match codeOption with
         |Some code ->
             func code
@@ -223,18 +226,23 @@ let inline processFunctionCallnew (state:IParseState) id (paramList:parameterLis
                         getActualTypeAndModeHelper t ((quadElementType.GetType expr.Place, mode) :: acc)
                 getActualTypeAndModeHelper parList (if resultType = TYPE_proc then [] else [resultType,RET])
             let inline getExpectedTypeAndMode (parList:entry list) =
-                List.map (fun param -> 
-                            match param.entry_info with
-                            |ENTRY_parameter p -> 
-                                (p.parameter_type,p.parameter_mode)
-                            |_ -> 
-                                internal_error (__SOURCE_FILE__,__LINE__) "Not a Parameter"
-                                raise Terminate) parList
+                let rec getExpectedTypeAndModeHelper rest acc=
+                    match rest with
+                    |[] ->
+                        acc
+                    |param :: t ->
+                        match param.entry_info with
+                        |ENTRY_parameter p -> 
+                            getExpectedTypeAndModeHelper t ((p.parameter_type,p.parameter_mode)::acc)
+                        |_ -> 
+                            internal_error (__SOURCE_FILE__,__LINE__) "Not a Parameter"
+                            raise Terminate                        
+                getExpectedTypeAndModeHelper parList []
             let inline errorcase exp act = 
                 if paramList =[] then 
-                    error "Semantic Error at %A: Parameter Mismatch:\n\t Expected Parameter List=%A \n\t Given empty Parameter List\n" p exp
+                    error "Semantic Error at %A: Parameter Mismatch at function %s:\n\t Expected Parameter List=%A \n\t Given empty Parameter List\n" p id exp
                 else
-                    error "Semantic Error at %A: Parameter Mismatch:\n\t Expected Parameter List = %A \n\t Actual Parameter List = %A\n" p exp act
+                    error "Semantic Error at %A: Parameter Mismatch at function %s:\n\t Expected Parameter List = %A \n\t Actual Parameter List = %A\n" p id exp act
                 printf "ERROR"; voidExpression
             let actualTypeAndMode = 
                 getActualTypeAndMode paramList resultType

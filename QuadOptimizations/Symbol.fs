@@ -59,16 +59,12 @@ and entry_info =
     | ENTRY_parameter of parameter_info
     | ENTRY_temporary of temporary_info
 
-and [<CustomEqualityAttribute>] [<NoComparisonAttribute>] entry =
+and [<ReferenceEquality>] entry =
     {
     entry_id    : id
     entry_scope : scope
     entry_info  : entry_info       
     }   
-    override x.Equals(e:obj) =
-        System.Object.ReferenceEquals(x:>obj, e)
-    override x.GetHashCode() =
-        x.entry_id.GetHashCode()
     static member GetType (entry:entry) =
         match entry.entry_info with
         | ENTRY_none -> 
@@ -332,7 +328,7 @@ let endFunctionHeader e typ =
                 | _ ->
                     internal_error (__SOURCE_FILE__,__LINE__) "Cannot fix offset to a non parameter \n"
             List.iter fix_offset inf.function_paramlist
-            inf.function_paramlist <- List.rev inf.function_paramlist
+            inf.function_paramlist <- inf.function_paramlist
             inf.function_posoffs <- !offset - start_positive_offset
         | PARDEF_CHECK ->
             if inf.function_redeflist <> [] then

@@ -161,12 +161,12 @@ let inline simpleBackwardPropagation (unit:quadWithIndexType list) =
                     simpleBackwardPropagationHelper ({ index = h2.index-1; quad = QuadNeg(q1,e2) }::acc) t 
                 |_ -> 
                     simpleBackwardPropagationHelper (h1::acc) (h2::t) 
-            (*|QuadAssign(e11,e21) ->
+            |QuadAssign(e11,e21) ->
                 match h2.quad with
                 |QuadAssign(e12,e22) when e21=e12->
-                    simpleBackwardPropagationHelper ({ index = h2.index-1; quad = QuadAssign(e11,e22) }::acc) t
+                    simpleBackwardPropagationHelper (h1::acc) ({ index = h2.index; quad = QuadAssign(e11,e22) }::t)
                 |_ -> 
-                    simpleBackwardPropagationHelper (h1::acc) (h2::t) *)
+                    simpleBackwardPropagationHelper (h1::acc) (h2::t)
             |_ ->
                 simpleBackwardPropagationHelper (h1::acc) (h2::t) 
     simpleBackwardPropagationHelper [] unit
@@ -274,30 +274,30 @@ let constantFolding (block:blockWithIdType) =
             |QuadSub(a,b,s) ->
                 match s.entryType with
                 |TYPE_int ->
-                    actOp QuadAdd ((-):intOpType) a b s Int tryGetIntConstant intHash 
+                    actOp QuadSub ((-):intOpType) a b s Int tryGetIntConstant intHash 
                 |TYPE_byte ->
-                    actOp QuadAdd ((-):byteOpType) a b s Byte tryGetByteConstant byteHash
+                    actOp QuadSub ((-):byteOpType) a b s Byte tryGetByteConstant byteHash
                 |_-> failwith "wtf" 
             |QuadMult(a,b,s) ->
                 match s.entryType with
                 |TYPE_int ->
-                    actOp QuadAdd ((-):intOpType) a b s Int tryGetIntConstant intHash 
+                    actOp QuadMult ((-):intOpType) a b s Int tryGetIntConstant intHash 
                 |TYPE_byte ->
-                    actOp QuadAdd ((-):byteOpType) a b s Byte tryGetByteConstant byteHash
+                    actOp QuadMult ((-):byteOpType) a b s Byte tryGetByteConstant byteHash
                 |_-> failwith "wtf" 
             |QuadDiv(a,b,s) ->
                 match s.entryType with
                 |TYPE_int ->
-                    actDivMod QuadAdd ((-):intOpType) a b s Int tryGetIntConstant intHash 0s
+                    actDivMod QuadDiv ((-):intOpType) a b s Int tryGetIntConstant intHash 0s
                 |TYPE_byte ->
-                    actDivMod QuadAdd ((-):byteOpType) a b s Byte tryGetByteConstant byteHash 0uy
+                    actDivMod QuadDiv ((-):byteOpType) a b s Byte tryGetByteConstant byteHash 0uy
                 |_-> failwith "wtf" 
             |QuadMod(a,b,s) ->
                 match s.entryType with
                 |TYPE_int ->
-                    actDivMod QuadAdd ((-):intOpType) a b s Int tryGetIntConstant intHash 0s
+                    actDivMod QuadMod ((-):intOpType) a b s Int tryGetIntConstant intHash 0s
                 |TYPE_byte ->
-                    actDivMod QuadAdd ((-):byteOpType) a b s Byte tryGetByteConstant byteHash 0uy
+                    actDivMod QuadMod ((-):byteOpType) a b s Byte tryGetByteConstant byteHash 0uy
                 |_-> failwith "wtf" 
             |QuadEQ(a,b,i1,i2) ->
                 match quadElementType.GetType a with
@@ -316,30 +316,30 @@ let constantFolding (block:blockWithIdType) =
             |QuadGE (a,b,i1,i2) ->
                 match quadElementType.GetType a with
                 |TYPE_int ->
-                    actCmp QuadNE ((>=):intCmpType) a b i1 i2 Int tryGetIntConstant
+                    actCmp QuadGE ((>=):intCmpType) a b i1 i2 Int tryGetIntConstant
                 |TYPE_byte ->
-                    actCmp QuadNE ((>=):byteCmpType) a b i1 i2 Byte tryGetByteConstant
+                    actCmp QuadGE ((>=):byteCmpType) a b i1 i2 Byte tryGetByteConstant
                 |_-> failwith "wtf" 
             |QuadLE (a,b,i1,i2) ->
                 match quadElementType.GetType a with
                 |TYPE_int ->
-                    actCmp QuadNE ((<=):intCmpType) a b i1 i2 Int tryGetIntConstant
+                    actCmp QuadLE ((<=):intCmpType) a b i1 i2 Int tryGetIntConstant
                 |TYPE_byte ->
-                    actCmp QuadNE ((<=):byteCmpType) a b i1 i2 Byte tryGetByteConstant
+                    actCmp QuadLE ((<=):byteCmpType) a b i1 i2 Byte tryGetByteConstant
                 |_-> failwith "wtf" 
             |QuadGT (a,b,i1,i2) ->
                 match quadElementType.GetType a with
                 |TYPE_int ->
-                    actCmp QuadNE ((>):intCmpType) a b i1 i2 Int tryGetIntConstant
+                    actCmp QuadGT ((>):intCmpType) a b i1 i2 Int tryGetIntConstant
                 |TYPE_byte ->
-                    actCmp QuadNE ((>):byteCmpType) a b i1 i2 Byte tryGetByteConstant
+                    actCmp QuadGT ((>):byteCmpType) a b i1 i2 Byte tryGetByteConstant
                 |_-> failwith "wtf" 
             |QuadLT (a,b,i1,i2) ->
                 match quadElementType.GetType a with
                 |TYPE_int ->
-                    actCmp QuadNE ((<):intCmpType) a b i1 i2 Int tryGetIntConstant
+                    actCmp QuadLT ((<):intCmpType) a b i1 i2 Int tryGetIntConstant
                 |TYPE_byte ->
-                    actCmp QuadNE ((<):byteCmpType) a b i1 i2 Byte tryGetByteConstant
+                    actCmp QuadLT ((<):byteCmpType) a b i1 i2 Byte tryGetByteConstant
                 |_-> failwith "wtf" 
             |QuadArray (ar,index,s) ->
                 match tryGetIntConstant index with
