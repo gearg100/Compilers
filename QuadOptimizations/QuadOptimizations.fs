@@ -145,20 +145,16 @@ let inline simpleBackwardPropagation (unit:quadWithIndexType list) =
                 |_ -> 
                     simpleBackwardPropagationHelper (h1::acc) (h2::t) 
             match h1.quad with
-            |QuadAdd(q1,q2,e) ->
-                checkAndContinue QuadAdd q1 q2 e
-            |QuadSub(q1,q2,e) ->
-                checkAndContinue QuadSub q1 q2 e
-            |QuadMult(q1,q2,e) ->
-                checkAndContinue QuadMult q1 q2 e
-            |QuadDiv(q1,q2,e) ->
-                checkAndContinue QuadDiv q1 q2 e
-            |QuadMod(q1,q2,e) ->
-                checkAndContinue QuadMod q1 q2 e
-            |QuadNeg(q1,e) ->
+            |QuadBinOperation(op,q1,q2,e) ->
+                match h2.quad with
+                |QuadAssign(Entry e1,Entry e2) when e.Equals(e1)->
+                    simpleBackwardPropagationHelper ({ index = h2.index-1; quad = QuadBinOperation(op,q1,q2,e2) }::acc) t
+                |_ -> 
+                    simpleBackwardPropagationHelper (h1::acc) (h2::t) 
+            |QuadUnOperation(op,q1,e) ->
                 match h2.quad with
                 |QuadAssign(Entry e1,Entry e2) when e=e1->
-                    simpleBackwardPropagationHelper ({ index = h2.index-1; quad = QuadNeg(q1,e2) }::acc) t 
+                    simpleBackwardPropagationHelper ({ index = h2.index-1; quad = QuadUnOperation(op,q1,e2) }::acc) t 
                 |_ -> 
                     simpleBackwardPropagationHelper (h1::acc) (h2::t) 
             |QuadAssign(e11,e21) ->
@@ -200,147 +196,121 @@ let constantFolding (block:blockWithIdType) =
         |[] -> 
             List.rev acc
         |h::t ->
-            let inline actOp constr operand (a:quadElementType) (b:quadElementType) (s:entryWithTypeAndNesting) elemConstr tryGetConstant (hashTable:Dictionary<_,_>) =
-                match tryGetConstant a, tryGetConstant b with
-                |Some c1,Some c2 ->
-                    let result = operand c1 c2
-                    hashTable.[s] <- result                    
-                    match s.entry.entry_info with
-                    |ENTRY_variable _ |ENTRY_parameter _ ->
-                        h.quad <- QuadAssign(elemConstr result, Entry s)
-                        h :: acc
-                    |ENTRY_temporary _ ->
-                        acc
-                    | _ -> 
-                        failwith "wtf"
-                |Some c, None ->
-                    h.quad <-constr(elemConstr c, b, s)
-                    h :: acc
-                |None, Some c ->
-                    h.quad <- constr(a, elemConstr c, s)
-                    h :: acc
-                |None, None ->
-                    h ::acc
-            let inline actDivMod constr operand (a:quadElementType) (b:quadElementType) (s:entryWithTypeAndNesting) elemConstr
-                tryGetConstant (hashTable:Dictionary<_,_>) zero=
-                match tryGetConstant a, tryGetConstant b with
-                |_ ,Some x when x = zero ->
-                    h ::acc
-                |Some c1,Some c2 ->
-                    let result = operand c1 c2
-                    hashTable.[s] <- result                    
-                    match s.entry.entry_info with
-                    |ENTRY_variable _ |ENTRY_parameter _ ->
-                        h.quad <- QuadAssign(elemConstr result, Entry s)
-                        h :: acc
-                    |ENTRY_temporary _ ->
-                        acc
-                    | _ -> 
-                        failwith "wtf"
-                |Some c, None ->
-                    h.quad <- constr(elemConstr c, b, s)
-                    h :: acc
-                |None, Some c ->
-                    h.quad <- constr(a, elemConstr c, s)
-                    h :: acc
-                |None, None ->
-                    h :: acc
-            let inline actCmp constr operand (a:quadElementType) (b:quadElementType) (i1:int ref) (i2:int ref) elemConstr
-                tryGetConstant =
-                match tryGetConstant a, tryGetConstant b with
-                |Some c1,Some c2 ->
-                    if operand c1 c2 
-                    then
-                        acc
-                    else
-                        h.quad <- QuadJump(i2) 
-                        h :: acc
-                |Some c, None ->
-                    h.quad <- constr(elemConstr c, b, i1, i2)
-                    h :: acc
-                |None, Some c ->
-                    h.quad <- constr(a, elemConstr c, i1, i2)
-                    h :: acc
-                |None, None ->
-                    h ::acc
             match h.quad with
-            |QuadAdd(a,b,s) -> 
+            |QuadBinOperation(op,a,b,s) ->
                 match s.entryType with
                 | TYPE_int ->
-                    actOp QuadAdd ((+):intOpType) a b s Int tryGetIntConstant intHash 
+                    match tryGetIntConstant a, tryGetIntConstant b with
+                    |Some c1,Some c2 ->
+                        if (op = OpDiv || op = OpMod) && c2 = 0s
+                        then 
+                            h::acc
+                        else 
+                            let result =
+                                (c1, c2) ||> 
+                                (match op with
+                                |OpAdd -> (+)
+                                |OpSub -> (-)
+                                |OpMult -> (*)
+                                |OpDiv -> (/)
+                                |OpMod  -> (%) )
+                            intHash.[s] <- result                    
+                            match s.entry.entry_info with
+                            |ENTRY_variable _ |ENTRY_parameter _ ->
+                                h.quad <- QuadAssign(Int result, Entry s)
+                                h :: acc
+                            |ENTRY_temporary _ ->
+                                acc
+                            | _ -> 
+                                failwith "wtf"
+                    |Some c, None ->
+                        h.quad <- QuadBinOperation(op,Int c, b, s)
+                        h :: acc
+                    |None, Some c ->
+                        h.quad <- QuadBinOperation(op,a, Int c, s)
+                        h :: acc
+                    |None, None ->
+                        h ::acc
                 | TYPE_byte ->
-                    actOp QuadAdd ((+):byteOpType) a b s Byte tryGetByteConstant byteHash
-                |_-> failwith "wtf" 
-            |QuadSub(a,b,s) ->
-                match s.entryType with
-                |TYPE_int ->
-                    actOp QuadSub ((-):intOpType) a b s Int tryGetIntConstant intHash 
-                |TYPE_byte ->
-                    actOp QuadSub ((-):byteOpType) a b s Byte tryGetByteConstant byteHash
-                |_-> failwith "wtf" 
-            |QuadMult(a,b,s) ->
-                match s.entryType with
-                |TYPE_int ->
-                    actOp QuadMult ((-):intOpType) a b s Int tryGetIntConstant intHash 
-                |TYPE_byte ->
-                    actOp QuadMult ((-):byteOpType) a b s Byte tryGetByteConstant byteHash
-                |_-> failwith "wtf" 
-            |QuadDiv(a,b,s) ->
-                match s.entryType with
-                |TYPE_int ->
-                    actDivMod QuadDiv ((-):intOpType) a b s Int tryGetIntConstant intHash 0s
-                |TYPE_byte ->
-                    actDivMod QuadDiv ((-):byteOpType) a b s Byte tryGetByteConstant byteHash 0uy
-                |_-> failwith "wtf" 
-            |QuadMod(a,b,s) ->
-                match s.entryType with
-                |TYPE_int ->
-                    actDivMod QuadMod ((-):intOpType) a b s Int tryGetIntConstant intHash 0s
-                |TYPE_byte ->
-                    actDivMod QuadMod ((-):byteOpType) a b s Byte tryGetByteConstant byteHash 0uy
-                |_-> failwith "wtf" 
-            |QuadEQ(a,b,i1,i2) ->
+                    match tryGetByteConstant a, tryGetByteConstant b with
+                    |Some c1,Some c2 ->
+                        if (op = OpDiv || op = OpMod) && c2 = 0uy
+                        then 
+                            h::acc
+                        else 
+                            let result = (c1, c2) ||>  (match op with
+                                                        |OpAdd -> (+)
+                                                        |OpSub -> (-)
+                                                        |OpMult -> (*)
+                                                        |OpDiv -> (/)
+                                                        |OpMod  -> (%))
+                            byteHash.[s] <- result                    
+                            match s.entry.entry_info with
+                            |ENTRY_variable _ |ENTRY_parameter _ ->
+                                h.quad <- QuadAssign(Byte result, Entry s)
+                                h :: acc
+                            |ENTRY_temporary _ ->
+                                acc
+                            | _ -> 
+                                failwith "wtf"
+                    |Some c, None ->
+                        h.quad <- QuadBinOperation(op,Byte c, b, s)
+                        h :: acc
+                    |None, Some c ->
+                        h.quad <- QuadBinOperation(op,a, Byte c, s)
+                        h :: acc
+                    |None, None ->
+                        h ::acc
+                | _ -> failwith "wtf"
+            |QuadComparison(comp,a,b,i1,i2) ->
                 match quadElementType.GetType a with
                 |TYPE_int ->
-                    actCmp QuadEQ ((=):intCmpType) a b i1 i2 Int tryGetIntConstant
+                    match tryGetIntConstant a, tryGetIntConstant b with
+                    |Some c1,Some c2 ->
+                        if (match comp with
+                            |CompEQ -> (=)
+                            |CompNE -> (<>)
+                            |CompLT -> (<)
+                            |CompGT -> (>)
+                            |CompLE -> (<=)
+                            |CompGE -> (>=)) c1 c2
+                        then
+                            acc
+                        else
+                            h.quad <- QuadJump(i2) 
+                            h :: acc
+                    |Some c, None ->
+                        h.quad <- QuadComparison(comp, Int c, b, i1, i2)
+                        h :: acc
+                    |None, Some c ->
+                        h.quad <- QuadComparison(comp, a, Int c, i1, i2)
+                        h :: acc
+                    |None, None ->
+                        h ::acc
                 |TYPE_byte ->
-                    actCmp QuadEQ ((=):byteCmpType) a b i1 i2 Byte tryGetByteConstant
-                |_-> failwith "wtf" 
-            |QuadNE (a,b,i1,i2) ->
-                match quadElementType.GetType a with
-                |TYPE_int ->
-                    actCmp QuadNE ((<>):intCmpType) a b i1 i2 Int tryGetIntConstant
-                |TYPE_byte ->
-                    actCmp QuadNE ((<>):byteCmpType) a b i1 i2 Byte tryGetByteConstant
-                |_-> failwith "wtf" 
-            |QuadGE (a,b,i1,i2) ->
-                match quadElementType.GetType a with
-                |TYPE_int ->
-                    actCmp QuadGE ((>=):intCmpType) a b i1 i2 Int tryGetIntConstant
-                |TYPE_byte ->
-                    actCmp QuadGE ((>=):byteCmpType) a b i1 i2 Byte tryGetByteConstant
-                |_-> failwith "wtf" 
-            |QuadLE (a,b,i1,i2) ->
-                match quadElementType.GetType a with
-                |TYPE_int ->
-                    actCmp QuadLE ((<=):intCmpType) a b i1 i2 Int tryGetIntConstant
-                |TYPE_byte ->
-                    actCmp QuadLE ((<=):byteCmpType) a b i1 i2 Byte tryGetByteConstant
-                |_-> failwith "wtf" 
-            |QuadGT (a,b,i1,i2) ->
-                match quadElementType.GetType a with
-                |TYPE_int ->
-                    actCmp QuadGT ((>):intCmpType) a b i1 i2 Int tryGetIntConstant
-                |TYPE_byte ->
-                    actCmp QuadGT ((>):byteCmpType) a b i1 i2 Byte tryGetByteConstant
-                |_-> failwith "wtf" 
-            |QuadLT (a,b,i1,i2) ->
-                match quadElementType.GetType a with
-                |TYPE_int ->
-                    actCmp QuadLT ((<):intCmpType) a b i1 i2 Int tryGetIntConstant
-                |TYPE_byte ->
-                    actCmp QuadLT ((<):byteCmpType) a b i1 i2 Byte tryGetByteConstant
-                |_-> failwith "wtf" 
+                    match tryGetByteConstant a, tryGetByteConstant b with
+                    |Some c1,Some c2 ->
+                        if (match comp with
+                            |CompEQ -> (=)
+                            |CompNE -> (<>)
+                            |CompLT -> (<)
+                            |CompGT -> (>)
+                            |CompLE -> (<=)
+                            |CompGE -> (>=)) c1 c2
+                        then
+                            acc
+                        else
+                            h.quad <- QuadJump(i2) 
+                            h :: acc
+                    |Some c, None ->
+                        h.quad <- QuadComparison(comp, Byte c, b, i1, i2)
+                        h :: acc
+                    |None, Some c ->
+                        h.quad <- QuadComparison(comp, a, Byte c, i1, i2)
+                        h :: acc
+                    |None, None ->
+                        h ::acc
+                |_ -> failwith "wtf"
             |QuadArray (ar,index,s) ->
                 match tryGetIntConstant index with
                 |Some c ->
@@ -411,8 +381,7 @@ let shortenJumpPaths (unitList: blockWithIdType list) =
                 match quads.[quads.Length - 1].quad with
                 |QuadJump x ->
                     dfs blockNameHash.[!x] [x]
-                |QuadEQ (_,_,l1,l2)|QuadNE (_,_,l1,l2)|QuadLT (_,_,l1,l2)
-                |QuadGT (_,_,l1,l2)|QuadGE (_,_,l1,l2)|QuadLE (_,_,l1,l2) ->
+                |QuadComparison(_,_,_,l1,l2) ->
                     dfs blockNameHash.[!l1] [l1]
                     dfs blockNameHash.[!l2] [l2]
                 | _ ->
@@ -428,8 +397,7 @@ let makeControlFlowGraphOfUnit (unit:blockWithIdType list) =
         let inline getChildren q =
             if parentsArray.[index]<>[] then 
                 match q.quad with
-                |QuadEQ (_,_,l1,l2)|QuadNE (_,_,l1,l2)|QuadLT (_,_,l1,l2)
-                |QuadGT (_,_,l1,l2)|QuadGE (_,_,l1,l2)|QuadLE (_,_,l1,l2) ->
+                |QuadComparison(_,_,_,l1,l2) ->
                     let childIndex1 = blockNameHash.[!l1]
                     let childIndex2 = blockNameHash.[!l2]
                     childrenArray.[index] <- [childIndex1; childIndex2] 

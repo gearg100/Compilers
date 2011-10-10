@@ -39,26 +39,42 @@ type quadElementType =
             TYPE_byte
         |String (_,s) -> 
             TYPE_array (TYPE_byte,int16 s.Length)
-
+type binOpType =
+    |OpAdd
+    |OpSub
+    |OpMult
+    |OpDiv
+    |OpMod
+    static member print =function
+        |OpAdd -> "+"
+        |OpSub -> "-"
+        |OpMult -> "*"
+        |OpDiv -> "/"
+        |OpMod -> "%"
+type unOpType =
+    |OpPos
+    |OpNeg
+    static member print = function
+        |OpPos -> "+"
+        |OpNeg -> "-"
+type compType = 
+    |CompEQ |CompNE |CompLT |CompGT |CompLE |CompGE
+    static member print = function
+        |CompEQ -> "=="
+        |CompNE -> "!="
+        |CompLT -> "<"
+        |CompGT -> ">"
+        |CompLE -> "<="
+        |CompGE -> ">="
 type quadType =
     |QuadNone
     |QuadUnit of entry
     |QuadEndUnit of entry
-    |QuadAdd of quadElementType * quadElementType * entryWithTypeAndNesting
-    |QuadSub of quadElementType * quadElementType * entryWithTypeAndNesting
-    |QuadNeg of quadElementType * entryWithTypeAndNesting
-    |QuadPos of quadElementType * entryWithTypeAndNesting
-    |QuadMult of quadElementType * quadElementType * entryWithTypeAndNesting
-    |QuadDiv of quadElementType * quadElementType * entryWithTypeAndNesting
-    |QuadMod of quadElementType * quadElementType * entryWithTypeAndNesting
+    |QuadBinOperation of binOpType * quadElementType * quadElementType * entryWithTypeAndNesting
+    |QuadUnOperation of unOpType * quadElementType * entryWithTypeAndNesting
     |QuadAssign of quadElementType * quadElementType
     |QuadArray of entryWithTypeAndNesting * quadElementType * entryWithTypeAndNesting
-    |QuadEQ of quadElementType * quadElementType * (int ref)*(int ref)
-    |QuadNE of quadElementType * quadElementType * (int ref)*(int ref)
-    |QuadLT of quadElementType * quadElementType * (int ref)*(int ref)
-    |QuadGT of quadElementType * quadElementType * (int ref)*(int ref)
-    |QuadGE of quadElementType * quadElementType * (int ref)*(int ref)
-    |QuadLE of quadElementType * quadElementType * (int ref)*(int ref)
+    |QuadComparison of compType * quadElementType * quadElementType * (int ref)*(int ref)
     |QuadJump of (int ref)
     |QuadCall of entryWithTypeAndNesting * HashSet<entryWithTypeAndNesting>
     |QuadPar of quadElementType * pass_mode
@@ -72,125 +88,51 @@ type quadType =
         |QuadEndUnit s->
             toString "endu , {0}, - , -" [|(id_name s.entry_id)|]
             //sprintf "endu , %s, - , -" s.entry_id.node
-        |QuadAdd(a,b,e) ->
-            toString "+    , {0}, {1}, {2}" [|
-            //sprintf "+    , %s, %s, %s" 
-                (quadElementType.GetValueAsString a) 
-                (quadElementType.GetValueAsString b) 
-                (id_name e.entry.entry_id)
+        |QuadBinOperation(op,a,b,e) ->
+            toString "{0}    , {1}, {2}, {3}" [|
+                binOpType.print op
+                quadElementType.GetValueAsString a
+                quadElementType.GetValueAsString b 
+                id_name e.entry.entry_id
             |]
-        |QuadSub(a,b,e) ->
-            toString "-    , {0}, {1}, {2}" [|
-            //sprintf "-    , %s, %s, %s" 
-                (quadElementType.GetValueAsString a) 
-                (quadElementType.GetValueAsString b) 
-                (id_name e.entry.entry_id)
-            |]
-        |QuadPos(a,e) ->
-            toString "+    , {0}, - , {1}" [|
-            //sprintf "-    , %s, - , %s"
-                (quadElementType.GetValueAsString a)
-                (id_name e.entry.entry_id)
-            |]
-        |QuadNeg(a,e) ->
-            toString "-    , {0}, - , {1}" [|
-            //sprintf "-    , %s, - , %s"
-                (quadElementType.GetValueAsString a)
-                (id_name e.entry.entry_id)
-            |]
-        |QuadMult(a,b,e) ->
-            toString "*    , {0}, {1}, {2}" [|
-            //sprintf "*    , %s, %s, %s" 
-                (quadElementType.GetValueAsString a) 
-                (quadElementType.GetValueAsString b) 
-                (id_name e.entry.entry_id)
-            |]
-        |QuadDiv(a,b,e) ->
-            toString "/    , {0}, {1}, {2}" [|
-            //sprintf "/    , %s, %s, %s" 
-                (quadElementType.GetValueAsString a) 
-                (quadElementType.GetValueAsString b) 
-                (id_name e.entry.entry_id)
-            |]
-        |QuadMod(a,b,e) ->
-            toString "%    , {0}, {1}, {2}" [|
-            //sprintf "%    , %s, %s, %s" 
-                (quadElementType.GetValueAsString a) 
-                (quadElementType.GetValueAsString b) 
-                (id_name e.entry.entry_id)
+        |QuadUnOperation(op,a,e) ->
+            toString "{0}    , {1}, - , {2}" [|
+                unOpType.print op
+                quadElementType.GetValueAsString a
+                id_name e.entry.entry_id
             |]
         |QuadAssign(a,e) ->
             toString ":=   , {0}, - , {1}" [|
             //sprintf ":=   , %s, - , %s" 
-                (quadElementType.GetValueAsString a) 
-                (quadElementType.GetValueAsString e)
+                quadElementType.GetValueAsString a
+                quadElementType.GetValueAsString e
             |]
         |QuadArray(e1, a, e2) ->
             toString "array, {0}, {1}, {2}" [|
             //sprintf "array, %s, %s, %s" 
-                (id_name e1.entry.entry_id)
-                (quadElementType.GetValueAsString a) 
-                (id_name e2.entry.entry_id)
+                id_name e1.entry.entry_id
+                quadElementType.GetValueAsString a
+                id_name e2.entry.entry_id
             |]
-        |QuadEQ(a,b,i1,i2) ->
-            toString "==   , {0}, {1}, ({2:d}, {3:d})" [|
-            //sprintf "==   , %s, %s, %d"
-                (quadElementType.GetValueAsString a) 
-                (quadElementType.GetValueAsString b)
+        |QuadComparison(comp, a,b,i1,i2) ->
+            toString "{0}   , {1}, {2}, ({3:d}, {4:d})" [|
+                compType.print comp
+                quadElementType.GetValueAsString a
+                quadElementType.GetValueAsString b
                 !i1 
                 !i2
-            |]
-        |QuadNE(a,b,i1,i2) ->
-            toString "!=   , {0}, {1}, ({2:d}, {3:d})" [|
-            //sprintf "!=   , %s, %s, %d"
-                (quadElementType.GetValueAsString a) 
-                (quadElementType.GetValueAsString b)
-                !i1
-                !i2
-            |]
-        |QuadLT(a,b,i1,i2) ->
-            toString "<    , {0}, {1}, ({2:d}, {3:d})" [|
-            //sprintf "<    , %s, %s, %d"
-                (quadElementType.GetValueAsString a) 
-                (quadElementType.GetValueAsString b)
-                !i1
-                !i2
-            |]
-        |QuadGT(a,b,i1,i2) ->
-            toString ">    , {0}, {1}, ({2:d}, {3:d})" [|
-            //sprintf ">   , %s, %s, %d"
-                (quadElementType.GetValueAsString a) 
-                (quadElementType.GetValueAsString b)
-                !i1
-                !i2 
-            |]
-        |QuadGE(a,b,i1,i2) ->
-            toString ">=   , {0}, {1}, ({2:d}, {3:d})" [|
-            //sprintf ">=   , %s, %s, %d"
-                (quadElementType.GetValueAsString a) 
-                (quadElementType.GetValueAsString b)
-                !i1
-                !i2 
-            |]
-        |QuadLE(a,b,i1,i2) ->
-            toString "<=   , {0}, {1}, ({2:d}, {3:d})" [|
-            //sprintf "<=   , %s, %s, %d"
-                (quadElementType.GetValueAsString a) 
-                (quadElementType.GetValueAsString b)
-                !i1
-                !i2 
             |]
         |QuadJump i ->
             toString "jump , - , - , {0:d}" [|!i|]
             //sprintf "jump , - , - , %d" !i
         |QuadCall (e,_) ->
-            toString "call , - , - , {0}" [|(id_name e.entry.entry_id)|]
+            toString "call , - , - , {0}" [|id_name e.entry.entry_id|]
             //sprintf "call , - , - , %s" (id_name e.entry_id)
         |QuadPar(a, mode) ->
             toString "par  , {0} , {1} , -" [| 
             //sprintf "par  , %s , %s , -"
-                (quadElementType.GetValueAsString a)
-                (pass_mode.print mode)
+                quadElementType.GetValueAsString a
+                pass_mode.print mode
             |]
         |QuadRet _ -> 
             "ret  , -, -, -"

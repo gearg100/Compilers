@@ -46,11 +46,11 @@ List.iter bulkLoad LibraryFunctions
 %type < quadType list > stmt_list
 %type < quadType list > compound_stmt
 %type < expressionType > func_call
-%type < parameterList > expr_list
+%type < parameterListnew > expr_list
 %type < expressionType > expr
 %type < expressionType > l_value
 %type < conditionType > cond
-%type < string > compop
+%type < compType > compop
 %type < expressionType > ref_value
 
 %left OR
@@ -195,18 +195,18 @@ compound_stmt: LCBR RCBR				{ [] }
 			  |LCBR error RCBR			{ syntaxError parseState "Syntax Error at %A - %A: Invalid Function body\n" []}
 //-----------------------------------------------------------------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------------------------------------------------------
-func_call: ID LPAREN RPAREN				{ processFunctionCall parseState $1 {expressionList=[];modeList=[]} }
+func_call: ID LPAREN RPAREN				{ processFunctionCall parseState $1 [] }//{expressionList=[];modeList=[]} }
 //-----------------------------------------------------------------------------------------------------------------------------------------
 		  |ID LPAREN expr_list RPAREN	{ processFunctionCall parseState $1 $3 }
 //-----------------------------------------------------------------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------------------------------------------------------
-expr_list: expr							{ { expressionList=[$1] ; modeList=[PASS_BY_VALUE] } }
+expr_list: expr							{ [$1,PASS_BY_VALUE] } //{ expressionList=[$1] ; modeList=[PASS_BY_VALUE] } }
 //-----------------------------------------------------------------------------------------------------------------------------------------
-		  |ref_value					{ { expressionList=[$1] ; modeList=[PASS_BY_REFERENCE] } }
+		  |ref_value					{ [$1,PASS_BY_REFERENCE] } //{ expressionList=[$1] ; modeList=[PASS_BY_REFERENCE] } }
 //-----------------------------------------------------------------------------------------------------------------------------------------
-		  |expr_list COMMA expr			{ $1.expressionList <- $3::$1.expressionList ; $1.modeList <- PASS_BY_VALUE::$1.modeList ; $1 }
+		  |expr_list COMMA expr			{ ($3,PASS_BY_VALUE)::$1 } //$1.expressionList <- $3::$1.expressionList ; $1.modeList <- PASS_BY_VALUE::$1.modeList ; $1 }
 //-----------------------------------------------------------------------------------------------------------------------------------------
-		  |expr_list COMMA ref_value	{ $1.expressionList <- $3::$1.expressionList ; $1.modeList <- PASS_BY_REFERENCE::$1.modeList ; $1 }
+		  |expr_list COMMA ref_value	{ ($3,PASS_BY_REFERENCE)::$1 } //$1.expressionList <- $3::$1.expressionList ; $1.modeList <- PASS_BY_REFERENCE::$1.modeList ; $1 }
 //-----------------------------------------------------------------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------------------------------------------------------
 
@@ -220,19 +220,19 @@ expr: INT					{ { Code = []; Place = Int($1) } }
 //-----------------------------------------------------------------------------------------------------------------------------------------
 	 |func_call				{ processFunctionCallExpression parseState $1 }
 //-----------------------------------------------------------------------------------------------------------------------------------------
-	 |PLUS expr %prec POS	{ processUnExpression parseState (QuadPos) $2 }
+	 |PLUS expr %prec POS	{ processUnExpression parseState (OpPos) $2 }
 //-----------------------------------------------------------------------------------------------------------------------------------------
-	 |MINUS expr %prec NEG	{ processUnExpression parseState (QuadNeg) $2 }
+	 |MINUS expr %prec NEG	{ processUnExpression parseState (OpNeg) $2 }
 //-----------------------------------------------------------------------------------------------------------------------------------------
-	 |expr MINUS expr		{ processBinExpression parseState (QuadSub) $1 $3 }
+	 |expr MINUS expr		{ processBinExpression parseState (OpSub) $1 $3 }
 //-----------------------------------------------------------------------------------------------------------------------------------------
-	 |expr PLUS expr		{ processBinExpression parseState (QuadAdd) $1 $3 }
+	 |expr PLUS expr		{ processBinExpression parseState (OpAdd) $1 $3 }
 //-----------------------------------------------------------------------------------------------------------------------------------------
-	 |expr ASTER expr		{ processBinExpression parseState (QuadMult) $1 $3 }
+	 |expr ASTER expr		{ processBinExpression parseState (OpMult) $1 $3 }
 //-----------------------------------------------------------------------------------------------------------------------------------------
-	 |expr SLASH expr		{ processBinExpression parseState (QuadDiv) $1 $3 }
+	 |expr SLASH expr		{ processBinExpression parseState (OpDiv) $1 $3 }
 //-----------------------------------------------------------------------------------------------------------------------------------------
-	 |expr MOD expr			{ processBinExpression parseState (QuadMod) $1 $3 }
+	 |expr MOD expr			{ processBinExpression parseState (OpMod) $1 $3 }
 //-----------------------------------------------------------------------------------------------------------------------------------------
 	 |error MINUS expr		{ syntaxError parseState "Syntax Error at %A - %A: Invalid Expression\n" voidExpression }
 //-----------------------------------------------------------------------------------------------------------------------------------------
@@ -276,7 +276,7 @@ cond: T_TRUE				{ processTrue () }
 //-----------------------------------------------------------------------------------------------------------------------------------------
 	 |NOT cond				{ { Code=$2.Code ; True=$2.False ; False=$2.True } }
 //-----------------------------------------------------------------------------------------------------------------------------------------
-	 |expr compop expr		{ processComparison parseState (functionize $2) $1 $3 }
+	 |expr compop expr		{ processComparison parseState $2 $1 $3 }
 //-----------------------------------------------------------------------------------------------------------------------------------------
 	 |cond AND cond			{ processAndCondition parseState $1 $3 }
 //-----------------------------------------------------------------------------------------------------------------------------------------
@@ -287,15 +287,15 @@ cond: T_TRUE				{ processTrue () }
 	 |error compop expr		{ syntaxError parseState "Syntax Error at %A: Invalid Condition\n" voidCondition}
 //-----------------------------------------------------------------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------------------------------------------------------
-compop: EQ { "EQ" }
+compop: EQ { CompEQ }
 //-----------------------------------------------------------------------------------------------------------------------------------------
-	   |NE { "NE" }
+	   |NE { CompNE }
 //-----------------------------------------------------------------------------------------------------------------------------------------
-	   |LT { "LT" }
+	   |LT { CompLT }
 //-----------------------------------------------------------------------------------------------------------------------------------------
-	   |GT { "GT" }
+	   |GT { CompGT }
 //-----------------------------------------------------------------------------------------------------------------------------------------
-	   |LE { "LE" }
+	   |LE { CompLE }
 //-----------------------------------------------------------------------------------------------------------------------------------------
-	   |GE { "GE" }
+	   |GE { CompGE }
 //-----------------------------------------------------------------------------------------------------------------------------------------

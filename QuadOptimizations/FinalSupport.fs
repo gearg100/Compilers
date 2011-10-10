@@ -2,7 +2,7 @@
 open Error
 open Types
 open Symbol
-
+open QuadSupport
 let inline sizeof (t:typ) =
     match t with
     |TYPE_int -> "word"
@@ -66,7 +66,22 @@ type operandType =
             string n
         | Const c ->
             string c
-
+type finalCompType =
+    | JE |JNE |JL |JG |JGE |JLE
+    static member print = function
+        | JE -> "je"
+        | JNE -> "jne"
+        | JL -> "jl"
+        | JG -> "jg"
+        | JLE -> "jle"
+        | JGE -> "jge"
+    static member ofQuadCompType = function
+        | CompEQ -> JE 
+        | CompNE -> JNE
+        | CompGT -> JG
+        | CompLT -> JL
+        | CompGE -> JGE
+        | CompLE -> JLE
 type finalType = 
     | Start of string
     | End of string
@@ -74,7 +89,7 @@ type finalType =
     | Call of string
     | Lea of (operandType * operandType)
     | Jump of string
-    | Cond of (string * string)
+    | Cond of (finalCompType * string)
     | Add of (operandType * operandType)
     | Sub of (operandType * operandType)
     | Pos of registerType
@@ -105,7 +120,9 @@ type finalType =
         | Jump str -> 
             sprintf "\tjmp %s" str
         | Cond (c,str) ->
-            sprintf "\t%s %s" c str
+            sprintf "\t%s %s" 
+                (finalCompType.print c)
+                str
         | Add (a1, a2) ->
             sprintf "\tadd %s, %s"
                 (operandType.print a1)

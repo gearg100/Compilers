@@ -28,8 +28,7 @@ module Compiler=
             let inline updateJumps unitList =
                 UnitList.mapi 1 (fun i quad -> 
                                     match quad with
-                                    |QuadEQ (_,_,l1,l2)|QuadNE (_,_,l1,l2)|QuadLT (_,_,l1,l2)
-                                    |QuadGT (_,_,l1,l2)|QuadGE (_,_,l1,l2)|QuadLE (_,_,l1,l2) ->
+                                    |QuadComparison(_,_,_,l1,l2) ->
                                         l1:= i + !l1
                                         l2:= i + !l2
                                         labelRegistry.Add (!l1) |>ignore
@@ -73,8 +72,6 @@ module Compiler=
     let inline printFinal final =
         [codeHead ()]::(UnitList.map finalType.print final) @ [codeTail ()]
     let inline printResult unitList =
-        //printfn "ma kai do"
-        //printfn "%A" unitList
         UnitList.iter (fun (str:string) -> output.WriteLine(str)) unitList
         output.Flush()
     open Block
@@ -125,29 +122,28 @@ let main () =
         do Compiler.initialize inputFile outputFile
         let intermediate = Compiler.frontend ()
         if intermediate <> [] then
-            intermediate |> if !debugMode <> "" then
-                                match !debugMode with
-                                |"SimpleOpts" ->
-                                    simpleBackwardPropagation >> (List.iter (Block.makeBasicBlocksOfUnit >> List.map (constantFolding) >> Compiler.printBlocks >> Compiler.printResult))
-                                |"Blocks" ->
-                                    (List.iter (Block.makeBasicBlocksOfUnit >> Compiler.printBlocks >> Compiler.printResult))
-                                |"SimplifyBlocks" ->
-                                    simpleBackwardPropagation >> (List.iter (Block.makeBasicBlocksOfUnit >> List.map (constantFolding) >> shortenJumpPaths >> Compiler.printBlocks >> Compiler.printResult))
-                                |"ControlGraph" ->
-                                    (List.iter (Block.makeBasicBlocksOfUnit >> makeControlFlowGraphOfUnit >> Compiler.printControlFlowGraph >> Compiler.printResult))
-                                |"SimpleOpts+ControlGraph" ->
-                                    simpleBackwardPropagation >> (List.iter (Block.makeBasicBlocksOfUnit >> List.map (constantFolding) >> shortenJumpPaths >> makeControlFlowGraphOfUnit >> Compiler.printControlFlowGraph >> Compiler.printResult))
-                                |_ ->
-                                    eprintfn "Not Implemented"
-                                    ignore
-                            else
-                                (if !optimizeFlag
+            intermediate |> if !debugMode <> "" 
+                            then List.iter (match !debugMode with
+                                            |"SimpleOpts" ->
+                                                simpleBackwardPropagation >> Block.makeBasicBlocksOfUnit >> List.map (constantFolding) >> Compiler.printBlocks >> Compiler.printResult
+                                            |"Blocks" ->
+                                                Block.makeBasicBlocksOfUnit >> Compiler.printBlocks >> Compiler.printResult
+                                            |"SimplifyBlocks" ->
+                                                simpleBackwardPropagation >> Block.makeBasicBlocksOfUnit >> List.map (constantFolding) >> shortenJumpPaths >> Compiler.printBlocks >> Compiler.printResult
+                                            |"ControlGraph" ->
+                                                Block.makeBasicBlocksOfUnit >> makeControlFlowGraphOfUnit >> Compiler.printControlFlowGraph >> Compiler.printResult
+                                            |"SimpleOpts+ControlGraph" ->
+                                                simpleBackwardPropagation >> Block.makeBasicBlocksOfUnit >> List.map (constantFolding) >> shortenJumpPaths >> makeControlFlowGraphOfUnit >> Compiler.printControlFlowGraph >> Compiler.printResult
+                                            |_ ->
+                                                eprintfn "Not Implemented"
+                                                ignore)
+                            else (if !optimizeFlag
                                     then Compiler.optimizer
                                     else id)
-                                >> (fun intermediateList ->
+                                >> fun intermediateList ->
                                     if not !produceFinal
                                         then Compiler.printIntermediate intermediateList
-                                        else intermediateList |> Compiler.backend |> Compiler.printFinal)
+                                        else intermediateList |> Compiler.backend |> Compiler.printFinal
                                 >> Compiler.printResult
     with
     | Failure s -> Console.Error.WriteLine s

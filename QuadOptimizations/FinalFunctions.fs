@@ -137,13 +137,13 @@ let inline QuadtoFinal (item:quadWithIndexType) (labelRegistry:HashSet<int>) =
         |TYPE_int ->(AX,CX)
         |TYPE_byte ->(AL,CL)
         |_ -> internal_error (__SOURCE_FILE__,__LINE__) "Neither int nor byte"
-    let inline Condition a b i1 i2 action =
+(*    let inline Condition a b i1 i2 action =
         let ar,br = chooseRegister a b
         List.concat [
                             load ar a ; load br b;
                             [Cmp (ar, br); Cond (action, sprintf "@label%d" !i1)]
                             [Jump (sprintf "@label%d" !i2)]
-                    ]
+                    ]*)
     let final=
         match item.quad with
         |QuadNone -> [ Label "; optimized and removed" ]
@@ -161,7 +161,60 @@ let inline QuadtoFinal (item:quadWithIndexType) (labelRegistry:HashSet<int>) =
                 Pop (BP);
                 Ret;
                 Endp (sprintf "_%s" uid)]
-        |QuadAdd(a,b,e) ->
+        |QuadBinOperation(op,a,b,e) ->
+            match op with
+            |OpAdd ->
+                let ar,br = chooseRegister a b
+                List.concat [
+                                load ar a ; load br b;
+                                Add (Register ar, Register br)::(store ar (Entry e))
+                            ]
+            |OpSub ->
+                let ar,br = chooseRegister a b
+                List.concat [
+                                load ar a ; load br b;
+                                Sub (Register ar, Register br)::(store ar (Entry e))
+                            ]
+            |OpMult ->
+                let ar,br = chooseRegister a b
+                List.concat [
+                                load ar a ; load br b;
+                                IMul br ::(store ar (Entry e))
+                            ]
+            |OpDiv ->
+                match quadElementType.GetType a with
+                |TYPE_int ->
+                    List.concat [
+                                    load AX a ; Cwd ::(load CX b);
+                                    IDiv CX ::(store AX (Entry e))
+                                ]
+                |TYPE_byte ->
+                     List.concat [
+                                    load AL a ; Cbw ::(load CL b);
+                                    IDiv CL ::(store AL (Entry e))
+                                ]
+                |_ -> internal_error (__SOURCE_FILE__,__LINE__) "Neither int nor byte"
+            |OpMod ->
+                match quadElementType.GetType a with
+                |TYPE_int ->
+                    List.concat [
+                                    load AX a ; Cwd ::(load CX b);
+                                    IDiv CX ::(store DX (Entry e))
+                                ]
+                |TYPE_byte ->
+                     List.concat [
+                                    load AL a ; Cbw ::(load CL b);
+                                    IDiv CL ::(store AH (Entry e))
+                                ]
+                |_ -> internal_error (__SOURCE_FILE__,__LINE__) "Neither int nor byte"
+        |QuadUnOperation(op,a,e) ->
+            let ar,_ = chooseRegister a QNone
+            match op with
+            |OpPos ->
+                (load ar a)@(Pos ar ::(store ar (Entry e)))
+            |OpNeg ->
+                (load ar a)@(Neg ar ::(store ar (Entry e)))
+(*        |QuadAdd(a,b,e) ->
             let ar,br = chooseRegister a b
             List.concat [
                             load ar a ; load br b;
@@ -210,7 +263,7 @@ let inline QuadtoFinal (item:quadWithIndexType) (labelRegistry:HashSet<int>) =
                                 load AL a ; Cbw ::(load CL b);
                                 IDiv CL ::(store AH (Entry e))
                             ]
-            |_ -> internal_error (__SOURCE_FILE__,__LINE__) "Neither int nor byte"
+            |_ -> internal_error (__SOURCE_FILE__,__LINE__) "Neither int nor byte"*)
         |QuadAssign(a,e) ->
             let ar,_ = chooseRegister a QNone
             (load ar a)@(store ar e)
@@ -226,7 +279,14 @@ let inline QuadtoFinal (item:quadWithIndexType) (labelRegistry:HashSet<int>) =
                             [Add (Register AX,Register CX)];
                             store AX (Entry (e2))
                         ]
-        |QuadEQ(a,b,i1,i2) ->
+        |QuadComparison(comp,a,b,i1,i2) ->
+            let ar,br = chooseRegister a b
+            List.concat [
+                                load ar a ; load br b;
+                                [Cmp (ar, br); Cond (finalCompType.ofQuadCompType comp, sprintf "@label%d" !i1)]
+                                [Jump (sprintf "@label%d" !i2)]
+                        ]
+(*        |QuadEQ(a,b,i1,i2) ->
             Condition a b i1 i2 "je "
         |QuadNE(a,b,i1,i2) ->
             Condition a b i1 i2 "jne "
@@ -237,7 +297,7 @@ let inline QuadtoFinal (item:quadWithIndexType) (labelRegistry:HashSet<int>) =
         |QuadGE(a,b,i1,i2) ->
             Condition a b i1 i2 "jge "
         |QuadLE(a,b,i1,i2) ->
-            Condition a b i1 i2"jle "
+            Condition a b i1 i2"jle "*)
         |QuadJump i ->
             [Jump (sprintf "@label%d" !i)]
         |QuadCall (f,_) ->
@@ -261,7 +321,6 @@ let inline QuadtoFinal (item:quadWithIndexType) (labelRegistry:HashSet<int>) =
                 internal_error (__SOURCE_FILE__,__LINE__) "invalid parameter"
         |QuadRet f -> 
             [Jump ("@" + entry.GetUniqueID f)]
-
     if labelRegistry.Contains (item.index) then (Label (sprintf "@label%d :" (item.index))::final) else final
     |>fun x ->
         Label (quadType.print item.quad|>sprintf ";@%d:\t\"%s\"" (item.index) ) :: x

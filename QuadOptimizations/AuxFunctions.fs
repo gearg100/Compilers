@@ -69,7 +69,7 @@ let LibraryFunctions = [
     ("strcat"      ,[("catd",TYPE_array (TYPE_byte,-1s),PASS_BY_REFERENCE)
                     ;("cats",TYPE_array (TYPE_byte,-1s),PASS_BY_REFERENCE)],TYPE_proc);
                        ]
-#warn "25"
+
 let inline bulkLoad (fName,parameterList,fType) = 
     let f = newFunction (id_make fName) true false
     openScope (Some f)
@@ -184,7 +184,7 @@ let inline checkParameters flag e p =
     |(t1,p1),(t2,p2) when t1==t2 && (if p1=PASS_BY_REFERENCE then (p1=p2) else true)->flag
     |_ ->false  
 
-let inline processFunctionCallnew (state:IParseState) id (paramList:parameterListnew) =
+let inline processFunctionCall (state:IParseState) id (paramList:parameterListnew) =
     let p,e = FindPosAndEntry state id
     let paramSet = new System.Collections.Generic.HashSet<entryWithTypeAndNesting>()
     let inline CheckAndCreateParameterCode (actualParList:parameterListnew) (parList:entry list) resultType func=
@@ -282,87 +282,6 @@ let inline processFunctionCallnew (state:IParseState) id (paramList:parameterLis
         error "undeclared Identifier"
         printf "ERROR"; voidExpression 
 
-let inline processFunctionCall (state:IParseState) id (paramList:parameterList) =
-    let expressionList = paramList.expressionList
-    let modeList = paramList.modeList   
-    let p,e = FindPosAndEntry state id
-    let inline errorcase exp act = 
-        if expressionList =[] then 
-            error "Semantic Error at %A: Parameter Mismatch:\n\t Expected Parameter List=%A \n\t Given empty Parameter List\n" p exp
-        else
-            error "Semantic Error at %A: Parameter Mismatch:\n\t Expected Parameter List = %A \n\t Actual Parameter List = %A\n" p exp act
-        printf "ERROR"; voidExpression
-    let inline createParameterCode acc expression (_,passMode) =
-        (acc@(QuadPar(expression.Place,passMode) :: (expression.Code)))
-    let inline getRefParameters f parlst typandmodelst=
-        let paramSet = new System.Collections.Generic.HashSet<entryWithTypeAndNesting>()
-        List.iter2 (fun (expr:expressionType) (_,mode) ->
-            if mode = PASS_BY_REFERENCE then
-                match expr.Place with
-                | Entry e ->
-                    paramSet.Add e |>ignore
-                | Valof _ ->
-                    let (QuadArray (ar,_,_)) = expr.Code.Head
-                    if ar.usageNest <> ar.entry.entry_scope.sco_nesting then
-                        let (TYPE_array(t,_)) = ar.entryType
-                        if t = TYPE_int then f.function_mutatesForeignInts <- true
-                        elif t = TYPE_byte then f.function_mutatesForeignBytes <- true
-                | _ ->
-                    ()) parlst.expressionList typandmodelst
-        paramSet
-    match e with
-    |Some entry->
-        match entry.entry_info with
-        |ENTRY_function f ->
-            if f.function_mutatesForeignBytes then setScopeFunctionsByteMutationFlag()
-            elif f.function_mutatesForeignBytes then setScopeFunctionsIntMutationFlag()
-            match f.function_result with
-            |TYPE_proc ->
-                let actualTypeAndMode = 
-                    List.map2 (fun quad mode -> (quad.Place |> quadElementType.GetType , mode)) expressionList modeList
-                let expectedTypeAndMode = 
-                    List.fold (fun acc param -> getParameterTypeAndPassMode param :: acc) [] f.function_paramlist
-                if  (f.function_paramlist.Length=expressionList.Length)&&
-                    (List.fold2 checkParameters true expectedTypeAndMode actualTypeAndMode) then 
-                    let code = 
-                        List.fold2 createParameterCode [] (expressionList) (expectedTypeAndMode)
-                    let z = 
-                        let fn = { entry = entry; entryType = TYPE_proc; usageNest = getScopeNesting () - 1 }
-                        {
-                            Code = QuadCall(fn, getRefParameters f paramList expectedTypeAndMode)::code
-                            Place = QNone
-                        }
-                    z
-                else
-                    errorcase expectedTypeAndMode actualTypeAndMode
-            |TYPE_int|TYPE_byte as resultType->
-                let actualTypeAndMode = 
-                    (resultType, RET)::(List.map2 (fun quad mode -> (quad.Place |> quadElementType.GetType , mode)) (expressionList) (modeList))
-                let expectedTypeAndMode = 
-                    List.fold (fun acc param -> getParameterTypeAndPassMode param :: acc) [] f.function_paramlist
-                if  (f.function_paramlist.Length=expressionList.Length+1)&&
-                    (List.fold2 checkParameters true expectedTypeAndMode actualTypeAndMode) then
-                    let code = 
-                        List.fold2 createParameterCode [] expressionList (expectedTypeAndMode.Tail)
-                    let temp = newTemporary resultType
-                    let z = 
-                        let fn = { entry = entry; entryType = resultType; usageNest = getScopeNesting () - 1 }
-                        let tmp = { entry = temp; entryType = resultType; usageNest = getScopeNesting () }
-                        {
-                            Code = QuadCall(fn,getRefParameters f paramList expectedTypeAndMode.Tail)::QuadPar ( Entry(tmp) , RET)::code
-                            Place = Entry(tmp)
-                        }
-                    z
-                else
-                   errorcase expectedTypeAndMode actualTypeAndMode
-            |_ -> error "Semantic Error at %A: wtf\n" p
-        |_ ->
-             error "Semantic Error at %A: Given name is not a Function\n" p
-             printf "ERROR"; voidExpression
-    |None -> 
-        error "undeclared Identifier"
-        printf "ERROR"; voidExpression 
-
 //LValue
 let inline getVariableOrParameterType (entry:entry) p=
     match entry.entry_info with
@@ -446,20 +365,20 @@ let inline processFunctionCallExpression (state:IParseState) f =
     if (checkExprSemantics (<>) t TYPE_proc state "Semantic Error at %A -%A: void Function call\n") 
     then f else printf "ERROR"; voidExpression
 
-let inline processUnExpression (state:IParseState) (op) (e:expressionType) =
+let inline processUnExpression (state:IParseState) (op:unOpType) (e:expressionType) =
     let typ = (e.Place |> quadElementType.GetType)
     if (checkExprSemantics (=) typ TYPE_int state "Semantic Error at %A - %A: Invalid use of Unary Operator\n") 
     then
         let temp = newTemporary typ
         let tmp = { entry = temp; entryType = typ; usageNest = getScopeNesting () }
         { 
-            Code = (op(e.Place, tmp) :: e.Code)
+            Code = (QuadUnOperation(op,e.Place, tmp) :: e.Code)
             Place = Entry(tmp)
         }
     else
         printf "ERROR"; voidExpression
 
-let inline processBinExpression (state:IParseState) (op) (e1:expressionType) (e2:expressionType) =
+let inline processBinExpression (state:IParseState) (op:binOpType) (e1:expressionType) (e2:expressionType) =
     let t1 = (e1.Place |> quadElementType.GetType)
     let t2 = (e2.Place |> quadElementType.GetType)
     if (checkExprSemantics (=) t2 t1 state "Semantic Error at %A - %A: Type Mismatch3\n") 
@@ -467,30 +386,20 @@ let inline processBinExpression (state:IParseState) (op) (e1:expressionType) (e2
         let temp = newTemporary t1
         let tmp = { entry = temp; entryType = t1; usageNest = getScopeNesting () }
         { 
-            Code = (op(e1.Place, e2.Place, tmp) :: (e2.Code @ e1.Code))
+            Code = (QuadBinOperation(op,e1.Place, e2.Place, tmp) :: (e2.Code @ e1.Code))
             Place = Entry(tmp)
         }
     else
         printf "ERROR"; voidExpression
 
 //Conditions
-let inline functionize token =
-    match token with
-    |"EQ" -> QuadEQ
-    |"NE" -> QuadNE
-    |"LT" -> QuadLT
-    |"GT" -> QuadGT
-    |"LE" -> QuadLE
-    |"GE" -> QuadGE
-    |_ -> internal_error (__SOURCE_FILE__,__LINE__) "Not a valid Comparison Operand"
-
-let inline processComparison (state:IParseState) (op) (e1:expressionType) (e2:expressionType)=
+let inline processComparison (state:IParseState) (op:compType) (e1:expressionType) (e2:expressionType)=
     if (checkCondSemantics (e1.Place |> quadElementType.GetType) (e2.Place |> quadElementType.GetType) 
             state "Semantic Error at %A - %A: Type Mismatch4\n")
     then
         let True, False = ref 1, ref 1
         {
-            Code    = op(e1.Place, e2.Place, True, False)::e2.Code@e1.Code
+            Code    = QuadComparison(op,e1.Place, e2.Place, True, False)::e2.Code@e1.Code
             True    = [True]
             False   = [False]
         }
