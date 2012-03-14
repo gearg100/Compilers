@@ -1,16 +1,50 @@
 BlockName 0 , Id = 1
 Starts at @1 and ends at @1
-1:	unit , prog1, - , -
+1:	unit , swap, - , -
 
 BlockName 1 , Id = 2
-Starts at @2 and ends at @17
-5:	:=   , 3, - , b
-12:	:=   , 25, - , a
-14:	:=   , 22, - , c
-16:	par  , c , V , -
-17:	call , - , - , writeInteger
+Starts at @2 and ends at @4
+2:	:=   , a, - , t
+3:	:=   , b, - , a
+4:	:=   , t, - , b
 
-BlockName 2 , Id = 18
-Starts at @18 and ends at @18
-18:	endu , prog1, - , -
+BlockName 2 , Id = 5
+Starts at @5 and ends at @5
+5:	endu , swap, - , -
+
+BlockName 0 , Id = 6
+Starts at @6 and ends at @6
+6:	unit , prog1, - , -
+
+BlockName 1 , Id = 7
+Starts at @7 and ends at @22
+10:	:=   , 3, - , b
+17:	:=   , 25, - , a
+19:	par  , 25 , V , -
+20:	par  , 3 , V , -
+21:	call , - , - , swap
+22:	jump , - , - , 27
+
+BlockName 2 , Id = 23
+Starts at @23 and ends at @24
+23:	:=   , 1, - , c
+24:	<    , a, b, (25, 26)
+
+BlockName 3 , Id = 25
+Starts at @25 and ends at @26
+25:	:=   , 1, - , c
+26:	jump , - , - , 29
+
+BlockName 4 , Id = 27
+Starts at @27 and ends at @27
+27:	-    , a, b, c
+
+BlockName 5 , Id = 29
+Starts at @29 and ends at @30
+29:	par  , c , V , -
+30:	call , - , - , writeInteger
+
+BlockName 6 , Id = 31
+Starts at @31 and ends at @31
+31:	endu , prog1, - , -
 

@@ -12,9 +12,6 @@ open Microsoft.FSharp.Text.Parsing
 #nowarn "25"
 let inline lexeme () = LexBuffer<char>.LexemeString
 let inline FindPosition (state:IParseState) = (state.InputStartPosition(1).Line,state.InputStartPosition(1).Column)
-let inline EHandler (ctxt: ParseErrorContext<_>) = 
-    let p=(ctxt.ParseState.InputStartPosition(1).Line,ctxt.ParseState.InputStartPosition(1).Column)
-    (error "Syntax Error at %A: Unrecognized Syntax Error\n" p )
 let inline getScopeFunction () = (!currentScope).sco_function.Value
 let inline setScopeFunctionsByteMutationFlag () = 
     let (ENTRY_function finfo) = getScopeFunction().entry_info

@@ -20,7 +20,7 @@ let rec sizeOfType t =
     | TYPE_array (et, sz) -> sz * sizeOfType et
     | _                   -> 0s
 
-let rec equalType t1 t2 =
+let inline equalType t1 t2 =
     match t1, t2 with
-    | TYPE_array (et1, sz1), TYPE_array (et2, sz2) -> equalType et1 et2
+    | TYPE_array (et1, sz1), TYPE_array (et2, sz2) -> et1 = et2
     | _                                            -> t1 = t2

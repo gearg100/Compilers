@@ -394,28 +394,28 @@ and _fslex_token  _fslex_state lexbuf =
 and _fslex_comment nest _fslex_state lexbuf =
   match _fslex_tables.Interpret(_fslex_state,lexbuf) with
   | 0 -> ( 
-# 99 "Lexer.fsl"
+# 100 "Lexer.fsl"
                           if (nest>1) then comment (nest-1) lexbuf
                                  else token lexbuf 
 # 400 "obj\x86\Release\Lexer.fs"
           )
   | 1 -> ( 
-# 101 "Lexer.fsl"
+# 102 "Lexer.fsl"
                           comment (nest+1) lexbuf 
 # 405 "obj\x86\Release\Lexer.fs"
           )
   | 2 -> ( 
-# 102 "Lexer.fsl"
+# 103 "Lexer.fsl"
                           lexbuf.EndPos <- lexbuf.EndPos.NextLine; comment nest lexbuf 
 # 410 "obj\x86\Release\Lexer.fs"
           )
   | 3 -> ( 
-# 103 "Lexer.fsl"
+# 104 "Lexer.fsl"
                          fatal "Unterminated comment" 
 # 415 "obj\x86\Release\Lexer.fs"
           )
   | 4 -> ( 
-# 104 "Lexer.fsl"
+# 105 "Lexer.fsl"
                            comment nest lexbuf 
 # 420 "obj\x86\Release\Lexer.fs"
           )
@@ -424,18 +424,18 @@ and _fslex_comment nest _fslex_state lexbuf =
 and _fslex_err pos s _fslex_state lexbuf =
   match _fslex_tables.Interpret(_fslex_state,lexbuf) with
   | 0 -> ( 
-# 106 "Lexer.fsl"
+# 108 "Lexer.fsl"
                                  error (sprintf "unrecognized input starting at %A : %s " pos s) 
 # 429 "obj\x86\Release\Lexer.fs"
           )
   | 1 -> ( 
-# 107 "Lexer.fsl"
+# 109 "Lexer.fsl"
                             lexbuf.EndPos <- lexbuf.EndPos.NextLine;
                error (sprintf "unrecognized input starting at %A : %s " pos s) 
 # 435 "obj\x86\Release\Lexer.fs"
           )
   | 2 -> ( 
-# 109 "Lexer.fsl"
+# 111 "Lexer.fsl"
                         err pos (s + (lexeme lexbuf)) lexbuf
 # 440 "obj\x86\Release\Lexer.fs"
           )
@@ -444,12 +444,12 @@ and _fslex_err pos s _fslex_state lexbuf =
 and _fslex_string pos s lex _fslex_state lexbuf =
   match _fslex_tables.Interpret(_fslex_state,lexbuf) with
   | 0 -> ( 
-# 111 "Lexer.fsl"
+# 114 "Lexer.fsl"
                          string pos ("27"::s) (lex.Append (lexeme lexbuf)) lexbuf 
 # 449 "obj\x86\Release\Lexer.fs"
           )
   | 1 -> ( 
-# 113 "Lexer.fsl"
+# 116 "Lexer.fsl"
                                  let s' = (match lexeme lexbuf with
                                            | "\\\"" -> "22"
                                            | "\\n"  -> "10"
@@ -462,32 +462,32 @@ and _fslex_string pos s lex _fslex_state lexbuf =
 # 462 "obj\x86\Release\Lexer.fs"
           )
   | 2 -> ( 
-# 122 "Lexer.fsl"
+# 125 "Lexer.fsl"
                                     let x=lexeme lexbuf in string pos ((((Int32.Parse (x.Substring (2,2),NumberStyles.HexNumber))).ToString ())::s) (lex.Append(lexeme lexbuf)) lexbuf 
 # 467 "obj\x86\Release\Lexer.fs"
           )
   | 3 -> ( 
-# 123 "Lexer.fsl"
+# 126 "Lexer.fsl"
                            STRING (List.rev s,lex.Append("\"").ToString()) 
 # 472 "obj\x86\Release\Lexer.fs"
           )
   | 4 -> ( 
-# 124 "Lexer.fsl"
+# 127 "Lexer.fsl"
                                     lexbuf.EndPos <- lexbuf.EndPos.NextLine; error (sprintf "unfinished string starting at %A : %s " pos (lex.ToString())) 
 # 477 "obj\x86\Release\Lexer.fs"
           )
   | 5 -> ( 
-# 125 "Lexer.fsl"
+# 128 "Lexer.fsl"
                           error (sprintf "unfinished string starting at %A : %s " pos (lex.ToString())) 
 # 482 "obj\x86\Release\Lexer.fs"
           )
   | 6 -> ( 
-# 126 "Lexer.fsl"
+# 129 "Lexer.fsl"
                                        string pos (("'" + lexeme lexbuf + "'")::s) (lex.Append(lexeme lexbuf)) lexbuf 
 # 487 "obj\x86\Release\Lexer.fs"
           )
   | _ -> failwith "string"
 
-# 128 "Lexer.fsl"
+# 131 "Lexer.fsl"
 
 # 3000000 "obj\x86\Release\Lexer.fs"

@@ -2,9 +2,31 @@ prog1 () : proc
    a : int;
    b : int;
    c : int;
+   swap (a : int, b : int) : proc
+            t : int;
+         {
+            t = a;
+            a = b;
+            b = t;
+         }
+
+         x : int;
+         i : int;
+         j : int;
    {
       b = 1+1+1+1+1;
       a = 15+2+2+b+2+2+1;
-      c = a + b;
+	  swap(a,b);
+	  if (a<b) 
+	  {
+		c=1;
+		if (a<b) 
+		  {
+			c=1;
+		  }
+	  }
+	  else c = a + b;
+	  a = b;
+	  c = a;
       writeInteger(c);
    }

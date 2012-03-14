@@ -8,8 +8,7 @@ type pass_mode =
     |PASS_BY_VALUE 
     |PASS_BY_REFERENCE
     |RET
-    static member print=
-        function
+    static member print = function
         |PASS_BY_VALUE -> "V"
         |PASS_BY_REFERENCE -> "R"
         |RET -> "RET"
@@ -65,29 +64,27 @@ and [<ReferenceEquality>] entry =
     entry_scope : scope
     entry_info  : entry_info       
     }   
-    static member GetType (entry:entry) =
-        match entry.entry_info with
-        | ENTRY_none -> 
+    static member GetType = function 
+        | {entry_info=ENTRY_none} -> 
             TYPE_none
-        | ENTRY_variable v-> 
+        | {entry_info=ENTRY_variable v}-> 
             v.variable_type
-        | ENTRY_function f-> 
+        | {entry_info=ENTRY_function f}-> 
             f.function_result
-        | ENTRY_parameter p -> 
+        | {entry_info=ENTRY_parameter p} -> 
             p.parameter_type
-        | ENTRY_temporary t -> 
+        | {entry_info=ENTRY_temporary t} -> 
             t.temporary_type
-    static member GetKind (e:entry) =
-        match e.entry_info with
-        | ENTRY_none -> 
+    static member GetKind = function
+        | {entry_info=ENTRY_none} -> 
             "nothing"
-        | ENTRY_variable v-> 
+        | {entry_info=ENTRY_variable v}-> 
             "variable"
-        | ENTRY_function f-> 
+        | {entry_info=ENTRY_function f}-> 
             "function"
-        | ENTRY_parameter p -> 
+        | {entry_info=ENTRY_parameter p} -> 
             "parameter"
-        | ENTRY_temporary t -> 
+        | {entry_info=ENTRY_temporary t} -> 
             "temporary"
     override x.ToString() = 
         "{ id = (" + x.entry_id.node + "," + x.entry_id.tag.ToString() +
@@ -101,6 +98,8 @@ and entryWithTypeAndNesting =
     usageNest :int
     entryType : typ
     }
+    override x.ToString() =
+       x.entry.ToString()
 
 type lookup_type = LOOKUP_CURRENT_SCOPE | LOOKUP_ALL_SCOPES
 

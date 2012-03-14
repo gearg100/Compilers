@@ -17,7 +17,7 @@ module Compiler=
     let mutable input = null
     let mutable output = null
     let mutable inFile= ""
-    let inline initialize (inputFile:string) (outputFile:string) =
+    let Initialize (inputFile:string) (outputFile:string) =
         input <- new StreamReader(inputFile)
         output <- new StreamWriter(outputFile)
         inFile <- inputFile
@@ -59,7 +59,6 @@ module Compiler=
             printfn "Unhandled Exception: %s \n\n%A \n\n%A \n\n%A" ex.Message ex.Data ex.StackTrace ex.TargetSite
             []
 
-
     let optimizer rawIntermediate =
         optimizeIntermediate rawIntermediate
 
@@ -84,7 +83,7 @@ module Compiler=
     let inline printControlFlowGraph (graph:controlFlowGraphNodeType list) =
         List.map (fun (graphNode:controlFlowGraphNodeType) -> 
                       "GraphNodeId "+ graphNode.id.ToString()
-                      ::  sprintf "Predecessors = %A" graphNode.predecessors
+                      :: sprintf "Predecessors = %A" graphNode.predecessors
                       :: sprintf "Successors = %A" graphNode.successors
                       :: "Code :"
                       :: List.map quadWithIndexType.print graphNode.block.quads
@@ -110,8 +109,9 @@ let main () =
         |> List.map (fun (sh, ty, desc) -> ArgInfo(sh, ty, desc))
     do ArgParser.Parse(specs, (fun infile -> inputFileCandidate := infile)) 
     try
-        if not <| File.Exists !inputFileCandidate then failwithf "Specified Input File \"%s\" does not exist" !inputFileCandidate
-        if !debugMode <> "" && not <| Array.exists (fun s -> s = !debugMode) debugFlags then failwithf "Specified Debug Flag \"%s\" does not exist" !debugMode
+        if !inputFileCandidate = "" then failwith "Unspecified Input File"
+        elif not <| File.Exists !inputFileCandidate then failwithf "Specified Input File \"%s\" does not exist" !inputFileCandidate
+        if !debugMode <> "" && not <| Array.exists ((=) !debugMode) debugFlags then failwithf "Specified Debug Flag \"%s\" does not exist" !debugMode
         let inputFile = 
             !inputFileCandidate
         let outputFile =
@@ -119,7 +119,7 @@ let main () =
             elif !debugMode <> "" then Path.GetFileNameWithoutExtension(inputFile) + "." + (!debugMode).ToLower()
             elif not !produceFinal then Path.GetFileNameWithoutExtension(inputFile) + ".quads"
             else (Path.GetFileNameWithoutExtension inputFile) + ".asm"
-        do Compiler.initialize inputFile outputFile
+        do Compiler.Initialize inputFile outputFile
         let intermediate = Compiler.frontend ()
         if intermediate <> [] then
             intermediate |> if !debugMode <> "" 
@@ -143,7 +143,8 @@ let main () =
                                 >> fun intermediateList ->
                                     if not !produceFinal
                                         then Compiler.printIntermediate intermediateList
-                                        else intermediateList |> Compiler.backend |> Compiler.printFinal
+                                        else intermediateList |> Compiler.backend 
+                                             |> Compiler.printFinal
                                 >> Compiler.printResult
     with
     | Failure s -> Console.Error.WriteLine s

@@ -95,6 +95,7 @@ rule token = parse
 |'\"'			{ string (lexbuf.StartPos.Line+1,lexbuf.StartPos.Column+1) [] (new StringBuilder ("\"")) lexbuf }
 | eof			{ T_EOF }
 | _             { err (lexbuf.StartPos.Line+1,lexbuf.StartPos.Column+1) (lexeme lexbuf) lexbuf }
+
 and comment nest = parse
 | "*)"			{ if (nest>1) then comment (nest-1) lexbuf
                   else token lexbuf }
@@ -102,11 +103,13 @@ and comment nest = parse
 | "\n"			{ lexbuf.EndPos <- lexbuf.EndPos.NextLine; comment nest lexbuf }
 | eof			{ fatal "Unterminated comment" }
 | _			    { comment nest lexbuf }
+
 and err pos s = parse
 | whitespace|eof{ error (sprintf "unrecognized input starting at %A : %s " pos s) }
 | newline		{ lexbuf.EndPos <- lexbuf.EndPos.NextLine;
 error (sprintf "unrecognized input starting at %A : %s " pos s) }
 | _				{ err pos (s + (lexeme lexbuf)) lexbuf}
+
 and string pos s lex = parse
 |'\''			{ string pos ("27"::s) (lex.Append (lexeme lexbuf)) lexbuf }
 | '\\' ('\"'|'n'|'r'|'t'|'\\'|'\'')

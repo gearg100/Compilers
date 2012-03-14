@@ -1,238 +1,581 @@
-BlockName 1
-Starts at @1 and ends at @1
-1:	unit , swap, - , -
-BlockName 4
-Starts at @2 and ends at @4
-2:	:=   , x, - , t
-3:	:=   , y, - , x
-4:	:=   , t, - , y
-BlockName 5
-Starts at @5 and ends at @5
-5:	endu , swap, - , -
-BlockName 6
-Starts at @6 and ends at @6
-6:	unit , bsort, - , -
-BlockName 7
-Starts at @7 and ends at @7
-7:	:=   , 121, - , changed
-BlockName 9
-Starts at @8 and ends at @9
-8:	==   , changed, 121, 10
-9:	jump , - , - , 46
-BlockName 11
-Starts at @10 and ends at @11
-10:	:=   , 110, - , changed
-11:	:=   , 0, - , i
-BlockName 14
-Starts at @12 and ends at @14
-12:	-    , n, 1, $1
-13:	<    , i, $1, 15
-14:	jump , - , - , 45
-BlockName 16
-Starts at @15 and ends at @16
-15:	==   , choice, 1, 17
-16:	jump , - , - , 30
-BlockName 21
-Starts at @17 and ends at @21
-17:	array, x, i, $2
-18:	+    , i, 1, $3
-19:	array, x, $3, $4
-20:	>    , [$2], [$4], 22
-21:	jump , - , - , 29
-BlockName 26
-Starts at @22 and ends at @26
-22:	array, x, i, $5
-23:	par  , [$5] , R , -
-24:	+    , i, 1, $6
-25:	array, x, $6, $7
-26:	par  , [$7] , R , -
-BlockName 29
-Starts at @27 and ends at @29
-27:	call , - , - , swap
-28:	:=   , 121, - , changed
-29:	jump , - , - , 42
-BlockName 34
-Starts at @30 and ends at @34
-30:	array, x, i, $8
-31:	+    , i, 1, $9
-32:	array, x, $9, $10
-33:	<    , [$8], [$10], 35
-34:	jump , - , - , 42
-BlockName 39
-Starts at @35 and ends at @39
-35:	array, x, i, $11
-36:	par  , [$11] , R , -
-37:	+    , i, 1, $12
-38:	array, x, $12, $13
-39:	par  , [$13] , R , -
-BlockName 41
-Starts at @40 and ends at @41
-40:	call , - , - , swap
-41:	:=   , 121, - , changed
-BlockName 44
-Starts at @42 and ends at @44
-42:	+    , i, 1, $14
-43:	:=   , $14, - , i
-44:	jump , - , - , 12
-BlockName 45
-Starts at @45 and ends at @45
-45:	jump , - , - , 8
-BlockName 46
-Starts at @46 and ends at @46
-46:	endu , bsort, - , -
-BlockName 47
-Starts at @47 and ends at @47
-47:	unit , writeArray, - , -
-BlockName 48
-Starts at @48 and ends at @48
-48:	par  , msg , R , -
-BlockName 50
-Starts at @49 and ends at @50
-49:	call , - , - , writeString
-50:	:=   , 0, - , i
-BlockName 52
-Starts at @51 and ends at @52
-51:	<    , i, n, 53
-52:	jump , - , - , 63
-BlockName 54
-Starts at @53 and ends at @54
-53:	>    , i, 0, 55
-54:	jump , - , - , 57
-BlockName 55
-Starts at @55 and ends at @55
-55:	par  , ", " , R , -
-BlockName 56
-Starts at @56 and ends at @56
-56:	call , - , - , writeString
-BlockName 58
-Starts at @57 and ends at @58
-57:	array, x, i, $15
-58:	par  , [$15] , V , -
-BlockName 62
-Starts at @59 and ends at @62
-59:	call , - , - , writeInteger
-60:	+    , i, 1, $16
-61:	:=   , $16, - , i
-62:	jump , - , - , 51
-BlockName 63
-Starts at @63 and ends at @63
-63:	par  , "\n" , R , -
-BlockName 64
-Starts at @64 and ends at @64
-64:	call , - , - , writeString
-BlockName 65
-Starts at @65 and ends at @65
-65:	endu , writeArray, - , -
-BlockName 66
-Starts at @66 and ends at @66
-66:	unit , main, - , -
-BlockName 67
-Starts at @67 and ends at @67
-67:	par  , "Seed :\t" , R , -
-BlockName 69
-Starts at @68 and ends at @69
-68:	call , - , - , writeString
-69:	par  , $17 , RET , -
-BlockName 72
-Starts at @70 and ends at @72
-70:	call , - , - , readInteger
-71:	:=   , $17, - , seed
-72:	par  , "How do you want to sort?\n" , R , -
-BlockName 74
-Starts at @73 and ends at @74
-73:	call , - , - , writeString
-74:	par  , "How do you want to sort?\x0a" , R , -
-BlockName 76
-Starts at @75 and ends at @76
-75:	call , - , - , writeString
-76:	par  , "  1. Min to Max\n" , R , -
-BlockName 78
-Starts at @77 and ends at @78
-77:	call , - , - , writeString
-78:	par  , "  2. Max to Min\n" , R , -
-BlockName 80
-Starts at @79 and ends at @80
-79:	call , - , - , writeString
-80:	par  , "Choice : " , R , -
-BlockName 82
-Starts at @81 and ends at @82
-81:	call , - , - , writeString
-82:	par  , $18 , RET , -
-BlockName 84
-Starts at @83 and ends at @84
-83:	call , - , - , readInteger
-84:	:=   , $18, - , choice
-BlockName 86
-Starts at @85 and ends at @86
-85:	<    , choice, 1, 89
-86:	jump , - , - , 87
-BlockName 88
-Starts at @87 and ends at @88
-87:	>    , choice, 2, 89
-88:	jump , - , - , 101
-BlockName 89
-Starts at @89 and ends at @89
-89:	par  , "How do you want to sort?\x0a" , R , -
-BlockName 91
-Starts at @90 and ends at @91
-90:	call , - , - , writeString
-91:	par  , "  1. Min to Max\n" , R , -
-BlockName 93
-Starts at @92 and ends at @93
-92:	call , - , - , writeString
-93:	par  , "  2. Max to Min\n" , R , -
-BlockName 95
-Starts at @94 and ends at @95
-94:	call , - , - , writeString
-95:	par  , "Choice : " , R , -
-BlockName 97
-Starts at @96 and ends at @97
-96:	call , - , - , writeString
-97:	par  , $19 , RET , -
-BlockName 100
-Starts at @98 and ends at @100
-98:	call , - , - , readInteger
-99:	:=   , $19, - , choice
-100:	jump , - , - , 85
-BlockName 101
-Starts at @101 and ends at @101
-101:	:=   , 0, - , i
-BlockName 103
-Starts at @102 and ends at @103
-102:	<    , i, 16, 104
-103:	jump , - , - , 114
-BlockName 113
-Starts at @104 and ends at @113
-104:	*    , seed, 137, $20
-105:	+    , $20, 220, $21
-106:	+    , $21, i, $22
-107:	%    , $22, 101, $23
-108:	:=   , $23, - , seed
-109:	array, x, i, $24
-110:	:=   , seed, - , [$24]
-111:	+    , i, 1, $25
-112:	:=   , $25, - , i
-113:	jump , - , - , 102
-BlockName 116
-Starts at @114 and ends at @116
-114:	par  , "Initial array: " , R , -
-115:	par  , 16 , V , -
-116:	par  , x , R , -
-BlockName 120
-Starts at @117 and ends at @120
-117:	call , - , - , writeArray
-118:	par  , 16 , V , -
-119:	par  , choice , V , -
-120:	par  , x , R , -
-BlockName 124
-Starts at @121 and ends at @124
-121:	call , - , - , bsort
-122:	par  , "Sorted array: " , R , -
-123:	par  , 16 , V , -
-124:	par  , x , R , -
-BlockName 125
-Starts at @125 and ends at @125
-125:	call , - , - , writeArray
-BlockName 126
-Starts at @126 and ends at @126
-126:	endu , main, - , -
+xseg segment public 'code'
+     assume cs : xseg, ds : xseg, ss : xseg
+     org 100h
+main proc near
+     call near ptr _main_0
+     mov ax, 4C00h
+     int 21h
+main endp
+
+;@1:	"unit , swap, - , -"
+_swap_2 proc near
+	push bp
+	mov bp, sp
+	sub sp, 2
+;@2:	":=   , x, - , t"
+	mov si, word ptr [bp+10]
+	mov ax, word ptr [si]
+	mov word ptr [bp-2], ax
+;@3:	":=   , y, - , x"
+	mov si, word ptr [bp+8]
+	mov ax, word ptr [si]
+	mov si, word ptr [bp+10]
+	mov word ptr [si], ax
+;@4:	":=   , t, - , y"
+	mov ax, word ptr [bp-2]
+	mov si, word ptr [bp+8]
+	mov word ptr [si], ax
+;@5:	"endu , swap, - , -"
+@swap_2 :
+	mov sp, bp
+	pop bp
+	ret
+_swap_2 endp
+
+;@6:	"unit , bsort, - , -"
+_bsort_1 proc near
+	push bp
+	mov bp, sp
+	sub sp, 31
+;@7:	":=   , 121, - , changed"
+	mov al, 121
+	mov byte ptr [bp-1], al
+;@8:	"==   , changed, 121, (9, 41)"
+@label8 :
+	mov al, byte ptr [bp-1]
+	mov cl, 121
+	cmp al, cl
+	je  @label9
+	jmp @label41
+;@9:	":=   , 110, - , changed"
+@label9 :
+	mov al, 110
+	mov byte ptr [bp-1], al
+;@10:	":=   , 0, - , i"
+	mov ax, 0
+	mov word ptr [bp-3], ax
+;@11:	"-    , n, 1, $1"
+@label11 :
+	mov ax, word ptr [bp+12]
+	mov cx, 1
+	sub ax, cx
+	mov word ptr [bp-5], ax
+;@12:	"<    , i, $1, (13, 40)"
+	mov ax, word ptr [bp-3]
+	mov cx, word ptr [bp-5]
+	cmp ax, cx
+	jl  @label13
+	jmp @label40
+;@13:	"==   , choice, 1, (14, 26)"
+@label13 :
+	mov ax, word ptr [bp+10]
+	mov cx, 1
+	cmp ax, cx
+	je  @label14
+	jmp @label26
+;@14:	"array, x, i, $2"
+@label14 :
+	mov ax, word ptr [bp-3]
+	mov cx, 2
+	imul cx
+	mov cx, word ptr [bp+8]
+	add ax, cx
+	mov word ptr [bp-7], ax
+;@15:	"+    , i, 1, $3"
+	mov ax, word ptr [bp-3]
+	mov cx, 1
+	add ax, cx
+	mov word ptr [bp-9], ax
+;@16:	"array, x, $3, $4"
+	mov ax, word ptr [bp-9]
+	mov cx, 2
+	imul cx
+	mov cx, word ptr [bp+8]
+	add ax, cx
+	mov word ptr [bp-11], ax
+;@17:	">    , [$2], [$4], (18, 25)"
+	mov di, word ptr [bp-7]
+	mov ax, word ptr [di]
+	mov di, word ptr [bp-11]
+	mov cx, word ptr [di]
+	cmp ax, cx
+	jg  @label18
+	jmp @label25
+;@18:	"array, x, i, $5"
+@label18 :
+	mov ax, word ptr [bp-3]
+	mov cx, 2
+	imul cx
+	mov cx, word ptr [bp+8]
+	add ax, cx
+	mov word ptr [bp-13], ax
+;@19:	"par  , [$5] , R , -"
+	mov si, word ptr [bp-13]
+	push si
+;@20:	"+    , i, 1, $6"
+	mov ax, word ptr [bp-3]
+	mov cx, 1
+	add ax, cx
+	mov word ptr [bp-15], ax
+;@21:	"array, x, $6, $7"
+	mov ax, word ptr [bp-15]
+	mov cx, 2
+	imul cx
+	mov cx, word ptr [bp+8]
+	add ax, cx
+	mov word ptr [bp-17], ax
+;@22:	"par  , [$7] , R , -"
+	mov si, word ptr [bp-17]
+	push si
+;@23:	"call , - , - , swap"
+	sub sp, 2
+	push bp
+	call near ptr _swap_2
+	add sp, 8
+;@24:	":=   , 121, - , changed"
+	mov al, 121
+	mov byte ptr [bp-1], al
+;@25:	"jump , - , - , 37"
+@label25 :
+	jmp @label37
+;@26:	"array, x, i, $8"
+@label26 :
+	mov ax, word ptr [bp-3]
+	mov cx, 2
+	imul cx
+	mov cx, word ptr [bp+8]
+	add ax, cx
+	mov word ptr [bp-19], ax
+;@27:	"+    , i, 1, $9"
+	mov ax, word ptr [bp-3]
+	mov cx, 1
+	add ax, cx
+	mov word ptr [bp-21], ax
+;@28:	"array, x, $9, $10"
+	mov ax, word ptr [bp-21]
+	mov cx, 2
+	imul cx
+	mov cx, word ptr [bp+8]
+	add ax, cx
+	mov word ptr [bp-23], ax
+;@29:	"<    , [$8], [$10], (30, 37)"
+	mov di, word ptr [bp-19]
+	mov ax, word ptr [di]
+	mov di, word ptr [bp-23]
+	mov cx, word ptr [di]
+	cmp ax, cx
+	jl  @label30
+	jmp @label37
+;@30:	"array, x, i, $11"
+@label30 :
+	mov ax, word ptr [bp-3]
+	mov cx, 2
+	imul cx
+	mov cx, word ptr [bp+8]
+	add ax, cx
+	mov word ptr [bp-25], ax
+;@31:	"par  , [$11] , R , -"
+	mov si, word ptr [bp-25]
+	push si
+;@32:	"+    , i, 1, $12"
+	mov ax, word ptr [bp-3]
+	mov cx, 1
+	add ax, cx
+	mov word ptr [bp-27], ax
+;@33:	"array, x, $12, $13"
+	mov ax, word ptr [bp-27]
+	mov cx, 2
+	imul cx
+	mov cx, word ptr [bp+8]
+	add ax, cx
+	mov word ptr [bp-29], ax
+;@34:	"par  , [$13] , R , -"
+	mov si, word ptr [bp-29]
+	push si
+;@35:	"call , - , - , swap"
+	sub sp, 2
+	push bp
+	call near ptr _swap_2
+	add sp, 8
+;@36:	":=   , 121, - , changed"
+	mov al, 121
+	mov byte ptr [bp-1], al
+;@37:	"+    , i, 1, $14"
+@label37 :
+	mov ax, word ptr [bp-3]
+	mov cx, 1
+	add ax, cx
+	mov word ptr [bp-31], ax
+;@38:	":=   , $14, - , i"
+	mov ax, word ptr [bp-31]
+	mov word ptr [bp-3], ax
+;@39:	"jump , - , - , 11"
+	jmp @label11
+;@40:	"jump , - , - , 8"
+@label40 :
+	jmp @label8
+;@41:	"endu , bsort, - , -"
+@label41 :
+@bsort_1 :
+	mov sp, bp
+	pop bp
+	ret
+_bsort_1 endp
+
+;@42:	"unit , writeArray, - , -"
+_writeArray_3 proc near
+	push bp
+	mov bp, sp
+	sub sp, 6
+;@43:	"par  , msg , R , -"
+	mov si, word ptr [bp+12]
+	push si
+;@44:	"call , - , - , writeString"
+	sub sp, 2
+	push bp
+	call near ptr _writeString
+	add sp, 6
+;@45:	":=   , 0, - , i"
+	mov ax, 0
+	mov word ptr [bp-2], ax
+;@46:	"<    , i, n, (47, 56)"
+@label46 :
+	mov ax, word ptr [bp-2]
+	mov cx, word ptr [bp+10]
+	cmp ax, cx
+	jl  @label47
+	jmp @label56
+;@47:	">    , i, 0, (48, 50)"
+@label47 :
+	mov ax, word ptr [bp-2]
+	mov cx, 0
+	cmp ax, cx
+	jg  @label48
+	jmp @label50
+;@48:	"par  , ", " , R , -"
+@label48 :
+	lea si, byte ptr @str_1
+	push si
+;@49:	"call , - , - , writeString"
+	sub sp, 2
+	push bp
+	call near ptr _writeString
+	add sp, 6
+;@50:	"array, x, i, $15"
+@label50 :
+	mov ax, word ptr [bp-2]
+	mov cx, 2
+	imul cx
+	mov cx, word ptr [bp+8]
+	add ax, cx
+	mov word ptr [bp-4], ax
+;@51:	"par  , [$15] , V , -"
+	mov di, word ptr [bp-4]
+	mov ax, word ptr [di]
+	push ax
+;@52:	"call , - , - , writeInteger"
+	sub sp, 2
+	push bp
+	call near ptr _writeInteger
+	add sp, 6
+;@53:	"+    , i, 1, $16"
+	mov ax, word ptr [bp-2]
+	mov cx, 1
+	add ax, cx
+	mov word ptr [bp-6], ax
+;@54:	":=   , $16, - , i"
+	mov ax, word ptr [bp-6]
+	mov word ptr [bp-2], ax
+;@55:	"jump , - , - , 46"
+	jmp @label46
+;@56:	"par  , "\n" , R , -"
+@label56 :
+	lea si, byte ptr @str_2
+	push si
+;@57:	"call , - , - , writeString"
+	sub sp, 2
+	push bp
+	call near ptr _writeString
+	add sp, 6
+;@58:	"endu , writeArray, - , -"
+@writeArray_3 :
+	mov sp, bp
+	pop bp
+	ret
+_writeArray_3 endp
+
+;@59:	"unit , main, - , -"
+_main_0 proc near
+	push bp
+	mov bp, sp
+	sub sp, 56
+;@60:	"par  , "Seed :\t" , R , -"
+	lea si, byte ptr @str_3
+	push si
+;@61:	"call , - , - , writeString"
+	sub sp, 2
+	push bp
+	call near ptr _writeString
+	add sp, 6
+;@62:	"par  , $17 , RET , -"
+	lea si, word ptr [bp-40]
+	push si
+;@63:	"call , - , - , readInteger"
+	push bp
+	call near ptr _readInteger
+	add sp, 4
+;@64:	":=   , $17, - , seed"
+	mov ax, word ptr [bp-40]
+	mov word ptr [bp-2], ax
+;@65:	"par  , "How do you want to sort?\n" , R , -"
+	lea si, byte ptr @str_4
+	push si
+;@66:	"call , - , - , writeString"
+	sub sp, 2
+	push bp
+	call near ptr _writeString
+	add sp, 6
+;@67:	"par  , "How do you want to sort?\x0a" , R , -"
+	lea si, byte ptr @str_5
+	push si
+;@68:	"call , - , - , writeString"
+	sub sp, 2
+	push bp
+	call near ptr _writeString
+	add sp, 6
+;@69:	"par  , "  1. Min to Max\n" , R , -"
+	lea si, byte ptr @str_6
+	push si
+;@70:	"call , - , - , writeString"
+	sub sp, 2
+	push bp
+	call near ptr _writeString
+	add sp, 6
+;@71:	"par  , "  2. Max to Min\n" , R , -"
+	lea si, byte ptr @str_7
+	push si
+;@72:	"call , - , - , writeString"
+	sub sp, 2
+	push bp
+	call near ptr _writeString
+	add sp, 6
+;@73:	"par  , "Choice : " , R , -"
+	lea si, byte ptr @str_8
+	push si
+;@74:	"call , - , - , writeString"
+	sub sp, 2
+	push bp
+	call near ptr _writeString
+	add sp, 6
+;@75:	"par  , $18 , RET , -"
+	lea si, word ptr [bp-42]
+	push si
+;@76:	"call , - , - , readInteger"
+	push bp
+	call near ptr _readInteger
+	add sp, 4
+;@77:	":=   , $18, - , choice"
+	mov ax, word ptr [bp-42]
+	mov word ptr [bp-4], ax
+;@78:	"<    , choice, 1, (80, 79)"
+@label78 :
+	mov ax, word ptr [bp-4]
+	mov cx, 1
+	cmp ax, cx
+	jl  @label80
+	jmp @label79
+;@79:	">    , choice, 2, (80, 92)"
+@label79 :
+	mov ax, word ptr [bp-4]
+	mov cx, 2
+	cmp ax, cx
+	jg  @label80
+	jmp @label92
+;@80:	"par  , "How do you want to sort?\x0a" , R , -"
+@label80 :
+	lea si, byte ptr @str_5
+	push si
+;@81:	"call , - , - , writeString"
+	sub sp, 2
+	push bp
+	call near ptr _writeString
+	add sp, 6
+;@82:	"par  , "  1. Min to Max\n" , R , -"
+	lea si, byte ptr @str_6
+	push si
+;@83:	"call , - , - , writeString"
+	sub sp, 2
+	push bp
+	call near ptr _writeString
+	add sp, 6
+;@84:	"par  , "  2. Max to Min\n" , R , -"
+	lea si, byte ptr @str_7
+	push si
+;@85:	"call , - , - , writeString"
+	sub sp, 2
+	push bp
+	call near ptr _writeString
+	add sp, 6
+;@86:	"par  , "Choice : " , R , -"
+	lea si, byte ptr @str_8
+	push si
+;@87:	"call , - , - , writeString"
+	sub sp, 2
+	push bp
+	call near ptr _writeString
+	add sp, 6
+;@88:	"par  , $19 , RET , -"
+	lea si, word ptr [bp-44]
+	push si
+;@89:	"call , - , - , readInteger"
+	push bp
+	call near ptr _readInteger
+	add sp, 4
+;@90:	":=   , $19, - , choice"
+	mov ax, word ptr [bp-44]
+	mov word ptr [bp-4], ax
+;@91:	"jump , - , - , 78"
+	jmp @label78
+;@92:	":=   , 0, - , i"
+@label92 :
+	mov ax, 0
+	mov word ptr [bp-38], ax
+;@93:	"<    , i, 16, (94, 104)"
+@label93 :
+	mov ax, word ptr [bp-38]
+	mov cx, 16
+	cmp ax, cx
+	jl  @label94
+	jmp @label104
+;@94:	"*    , seed, 137, $20"
+@label94 :
+	mov ax, word ptr [bp-2]
+	mov cx, 137
+	imul cx
+	mov word ptr [bp-46], ax
+;@95:	"+    , $20, 220, $21"
+	mov ax, word ptr [bp-46]
+	mov cx, 220
+	add ax, cx
+	mov word ptr [bp-48], ax
+;@96:	"+    , $21, i, $22"
+	mov ax, word ptr [bp-48]
+	mov cx, word ptr [bp-38]
+	add ax, cx
+	mov word ptr [bp-50], ax
+;@97:	"%    , $22, 101, $23"
+	mov ax, word ptr [bp-50]
+	cwd
+	mov cx, 101
+	idiv cx
+	mov word ptr [bp-52], dx
+;@98:	":=   , $23, - , seed"
+	mov ax, word ptr [bp-52]
+	mov word ptr [bp-2], ax
+;@99:	"array, x, i, $24"
+	mov ax, word ptr [bp-38]
+	mov cx, 2
+	imul cx
+	lea cx, word ptr [bp-36]
+	add ax, cx
+	mov word ptr [bp-54], ax
+;@100:	":=   , seed, - , [$24]"
+	mov ax, word ptr [bp-2]
+	mov di, word ptr [bp-54]
+	mov word ptr [di], ax
+;@101:	"+    , i, 1, $25"
+	mov ax, word ptr [bp-38]
+	mov cx, 1
+	add ax, cx
+	mov word ptr [bp-56], ax
+;@102:	":=   , $25, - , i"
+	mov ax, word ptr [bp-56]
+	mov word ptr [bp-38], ax
+;@103:	"jump , - , - , 93"
+	jmp @label93
+;@104:	"par  , "Initial array: " , R , -"
+@label104 :
+	lea si, byte ptr @str_9
+	push si
+;@105:	"par  , 16 , V , -"
+	mov ax, 16
+	push ax
+;@106:	"par  , x , R , -"
+	lea si, word ptr [bp-36]
+	push si
+;@107:	"call , - , - , writeArray"
+	sub sp, 2
+	push bp
+	call near ptr _writeArray_3
+	add sp, 10
+;@108:	"par  , 16 , V , -"
+	mov ax, 16
+	push ax
+;@109:	"par  , choice , V , -"
+	mov ax, word ptr [bp-4]
+	push ax
+;@110:	"par  , x , R , -"
+	lea si, word ptr [bp-36]
+	push si
+;@111:	"call , - , - , bsort"
+	sub sp, 2
+	push bp
+	call near ptr _bsort_1
+	add sp, 10
+;@112:	"par  , "Sorted array: " , R , -"
+	lea si, byte ptr @str_10
+	push si
+;@113:	"par  , 16 , V , -"
+	mov ax, 16
+	push ax
+;@114:	"par  , x , R , -"
+	lea si, word ptr [bp-36]
+	push si
+;@115:	"call , - , - , writeArray"
+	sub sp, 2
+	push bp
+	call near ptr _writeArray_3
+	add sp, 10
+;@116:	"endu , main, - , -"
+@main_0 :
+	mov sp, bp
+	pop bp
+	ret
+_main_0 endp
+
+extrn _writeString : proc
+extrn _writeInteger : proc
+extrn _readInteger : proc
+; ", "
+@str_1 db ', ', 0
+
+; "\n"
+@str_2 db 10, 0
+
+; "Seed :\t"
+@str_3 db 'Seed :', 09, 0
+
+; "How do you want to sort?\n"
+@str_4 db 'How do you want to sort?', 10, 0
+
+; "How do you want to sort?\x0a"
+@str_5 db 'How do you want to sort?', 10, 0
+
+; "  1. Min to Max\n"
+@str_6 db '  1. Min to Max', 10, 0
+
+; "  2. Max to Min\n"
+@str_7 db '  2. Max to Min', 10, 0
+
+; "Choice : "
+@str_8 db 'Choice : ', 0
+
+; "Initial array: "
+@str_9 db 'Initial array: ', 0
+
+; "Sorted array: "
+@str_10 db 'Sorted array: ', 0
+
+xseg ends
+     end  main
+

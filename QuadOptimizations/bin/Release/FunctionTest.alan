@@ -8,10 +8,10 @@ functionTest () : proc
   
   writeTwoIntegers(a : int, b : int) : proc
   {
-    writeInteger(a);
-    writeString(" ");
-    writeInteger(b);
-    writeString("\n");
+--    writeInteger(a);
+--    writeString(" ");
+--    writeInteger(b);
+--    writeString("\n");
   }
   
   foo : int;

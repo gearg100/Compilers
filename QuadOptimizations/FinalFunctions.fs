@@ -131,19 +131,11 @@ let inline store R a =
     |_ -> internal_error (__SOURCE_FILE__,__LINE__) "cannot store to a constant"
    
 let inline QuadtoFinal (item:quadWithIndexType) (labelRegistry:HashSet<int>) = 
-    //(quadType.print quad|>printfn "\r@%d: \"%s\":" i )
     let inline chooseRegister a b =
         match quadElementType.GetType a with
         |TYPE_int ->(AX,CX)
         |TYPE_byte ->(AL,CL)
         |_ -> internal_error (__SOURCE_FILE__,__LINE__) "Neither int nor byte"
-(*    let inline Condition a b i1 i2 action =
-        let ar,br = chooseRegister a b
-        List.concat [
-                            load ar a ; load br b;
-                            [Cmp (ar, br); Cond (action, sprintf "@label%d" !i1)]
-                            [Jump (sprintf "@label%d" !i2)]
-                    ]*)
     let final=
         match item.quad with
         |QuadNone -> [ Label "; optimized and removed" ]
@@ -176,11 +168,32 @@ let inline QuadtoFinal (item:quadWithIndexType) (labelRegistry:HashSet<int>) =
                                 Sub (Register ar, Register br)::(store ar (Entry e))
                             ]
             |OpMult ->
+                    let ar,br = chooseRegister a b
+                (*let inline isPowerOfTwo x zero one = (x > one) && (x &&& (x - one)) = zero
+                let inline findPower x zero one =
+                    let rec power x acc = 
+                        let x' = x >>> 1
+                        if x' = one then acc else power x' (acc + 1)
+                    power x 1
                 let ar,br = chooseRegister a b
-                List.concat [
-                                load ar a ; load br b;
-                                IMul br ::(store ar (Entry e))
-                            ]
+                match a, b with
+                |Int x, c | c, Int x when x |> isPowerOfTwo 0s 1s -> 
+                    findPower x 0s 1s
+                    List.concat [
+                                    load AX c ;
+                                    Shl(AX,) ::(store ar (Entry e))
+                                ]
+                |Byte x, _ | _, Byte x when x |> isPowerOfTwo 0uy 1uy->
+                    findPower x 0uy 1uy
+                    List.concat [
+                                    load ar a ; load br b;
+                                    IMul br ::(store ar (Entry e))
+                                ]
+                | _ ->*)                    
+                    List.concat [
+                                    load ar a ; load br b;
+                                    IMul br ::(store ar (Entry e))
+                                ]
             |OpDiv ->
                 match quadElementType.GetType a with
                 |TYPE_int ->
@@ -214,56 +227,6 @@ let inline QuadtoFinal (item:quadWithIndexType) (labelRegistry:HashSet<int>) =
                 (load ar a)@(Pos ar ::(store ar (Entry e)))
             |OpNeg ->
                 (load ar a)@(Neg ar ::(store ar (Entry e)))
-(*        |QuadAdd(a,b,e) ->
-            let ar,br = chooseRegister a b
-            List.concat [
-                            load ar a ; load br b;
-                            Add (Register ar, Register br)::(store ar (Entry e))
-                        ]
-        |QuadSub(a,b,e) ->
-            let ar,br = chooseRegister a b
-            List.concat [
-                            load ar a ; load br b;
-                            Sub (Register ar, Register br)::(store ar (Entry e))
-                        ]
-        |QuadPos(a,e) ->
-            let ar,_ = chooseRegister a QNone
-            (load ar a)@(Pos ar ::(store ar (Entry e)))
-        |QuadNeg(a,e) ->
-            let ar,_ = chooseRegister a QNone
-            (load ar a)@(Neg ar ::(store ar (Entry e)))
-        |QuadMult(a,b,e) ->
-            let ar,br = chooseRegister a b
-            List.concat [
-                            load ar a ; load br b;
-                            IMul br ::(store ar (Entry e))
-                        ]
-        |QuadDiv(a,b,e) ->
-            match quadElementType.GetType a with
-            |TYPE_int ->
-                List.concat [
-                                load AX a ; Cwd ::(load CX b);
-                                IDiv CX ::(store AX (Entry e))
-                            ]
-            |TYPE_byte ->
-                 List.concat [
-                                load AL a ; Cbw ::(load CL b);
-                                IDiv CL ::(store AL (Entry e))
-                            ]
-            |_ -> internal_error (__SOURCE_FILE__,__LINE__) "Neither int nor byte"
-        |QuadMod(a,b,e) ->
-            match quadElementType.GetType a with
-            |TYPE_int ->
-                List.concat [
-                                load AX a ; Cwd ::(load CX b);
-                                IDiv CX ::(store DX (Entry e))
-                            ]
-            |TYPE_byte ->
-                 List.concat [
-                                load AL a ; Cbw ::(load CL b);
-                                IDiv CL ::(store AH (Entry e))
-                            ]
-            |_ -> internal_error (__SOURCE_FILE__,__LINE__) "Neither int nor byte"*)
         |QuadAssign(a,e) ->
             let ar,_ = chooseRegister a QNone
             (load ar a)@(store ar e)
@@ -286,18 +249,6 @@ let inline QuadtoFinal (item:quadWithIndexType) (labelRegistry:HashSet<int>) =
                                 [Cmp (ar, br); Cond (finalCompType.ofQuadCompType comp, sprintf "@label%d" !i1)]
                                 [Jump (sprintf "@label%d" !i2)]
                         ]
-(*        |QuadEQ(a,b,i1,i2) ->
-            Condition a b i1 i2 "je "
-        |QuadNE(a,b,i1,i2) ->
-            Condition a b i1 i2 "jne "
-        |QuadLT(a,b,i1,i2) ->
-            Condition a b i1 i2 "jl "
-        |QuadGT(a,b,i1,i2) ->
-            Condition a b i1 i2 "jg "
-        |QuadGE(a,b,i1,i2) ->
-            Condition a b i1 i2 "jge "
-        |QuadLE(a,b,i1,i2) ->
-            Condition a b i1 i2"jle "*)
         |QuadJump i ->
             [Jump (sprintf "@label%d" !i)]
         |QuadCall (f,_) ->

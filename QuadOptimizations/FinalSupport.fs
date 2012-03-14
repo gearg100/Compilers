@@ -94,6 +94,10 @@ type finalType =
     | Sub of (operandType * operandType)
     | Pos of registerType
     | Neg of registerType
+    | Shl of registerType * int
+    | Sal of registerType * int
+    | Shr of registerType * int
+    | Sar of registerType * int
     | IMul of registerType
     | IDiv of registerType
     | Push of operandType
@@ -136,6 +140,26 @@ type finalType =
         | Neg a ->
             sprintf "\tneg %s"
                 (registerType.print a)
+        | Shl(reg, i) ->
+            if i <> 1 then 
+                sprintf "\tmov cl, %d" i + System.Environment.NewLine + sprintf "\tshl %s, cl" (registerType.print reg)
+            else
+                sprintf "\tshl %s, 1" (registerType.print reg)
+        | Sal(reg, i) ->
+            if i <> 1 then 
+                sprintf "\tmov cl, %d" i + System.Environment.NewLine + sprintf "\tsal %s, cl" (registerType.print reg)
+            else
+                sprintf "\tsal %s, 1" (registerType.print reg)
+        | Shr(reg, i) ->
+            if i <> 1 then 
+                sprintf "\tmov cl, %d" i + System.Environment.NewLine + sprintf "\tshr %s, cl" (registerType.print reg)
+            else
+                sprintf "\tshr %s, 1" (registerType.print reg)
+        | Sar(reg, i) ->
+            if i <> 1 then 
+                sprintf "\tmov cl, %d" i + System.Environment.NewLine + sprintf "\tsar %s, cl" (registerType.print reg)
+            else
+                sprintf "\tsar %s, 1" (registerType.print reg)
         | IMul reg ->
             sprintf "\timul %s" 
                 (registerType.print reg)

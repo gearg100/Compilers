@@ -10,7 +10,7 @@ type hash_consed<'a> = {
 let hash_value x = x.node
 let hash_tag x = x.tag
 
-type Make<'a when 'a : equality> (X: IEqualityComparer<'a>)=
+type Make<'a> (X: IEqualityComparer<'a>)=
     member me.f () =
         let gen_tag = ref 0
         let table : hash_consed<'a> list array = Array.create 397 []

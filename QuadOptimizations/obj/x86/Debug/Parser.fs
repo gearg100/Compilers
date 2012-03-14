@@ -62,7 +62,7 @@ type token =
   | T_EOF
   | ID of (string)
   | STRING of (string list*string)
-  | INT of (int)
+  | INT of (int16)
   | BYTE of (byte)
 // This type is used to give symbolic names to token indexes, useful for error messages
 type tokenId = 
@@ -649,7 +649,7 @@ let _fsyacc_reductions ()  =    [|
                 (
                    (
 # 120 "Parser.fsy"
-                                              TYPE_array (_1,-1) 
+                                              TYPE_array (_1,-1s) 
                    )
 # 120 "Parser.fsy"
                  :  typ ));
@@ -735,7 +735,7 @@ let _fsyacc_reductions ()  =    [|
         (fun (parseState : Microsoft.FSharp.Text.Parsing.IParseState) ->
             let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : string)) in
             let _3 = (let data = parseState.GetInput(3) in (Microsoft.FSharp.Core.Operators.unbox data :  typ )) in
-            let _5 = (let data = parseState.GetInput(5) in (Microsoft.FSharp.Core.Operators.unbox data : int)) in
+            let _5 = (let data = parseState.GetInput(5) in (Microsoft.FSharp.Core.Operators.unbox data : int16)) in
             Microsoft.FSharp.Core.Operators.box
                 (
                    (
@@ -1085,7 +1085,7 @@ let _fsyacc_reductions ()  =    [|
                  :  parameterList ));
 # 1086 "obj\x86\Debug\Parser.fs"
         (fun (parseState : Microsoft.FSharp.Text.Parsing.IParseState) ->
-            let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : int)) in
+            let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : int16)) in
             Microsoft.FSharp.Core.Operators.box
                 (
                    (
@@ -1145,7 +1145,7 @@ let _fsyacc_reductions ()  =    [|
                 (
                    (
 # 223 "Parser.fsy"
-                                              processExpression parseState (QuadAdd) _2 None 
+                                              processUnExpression parseState (QuadPos) _2 
                    )
 # 223 "Parser.fsy"
                  :  expressionType ));
@@ -1156,7 +1156,7 @@ let _fsyacc_reductions ()  =    [|
                 (
                    (
 # 225 "Parser.fsy"
-                                               processExpression parseState (QuadSub) _2 None 
+                                               processUnExpression parseState (QuadNeg) _2 
                    )
 # 225 "Parser.fsy"
                  :  expressionType ));
@@ -1168,7 +1168,7 @@ let _fsyacc_reductions ()  =    [|
                 (
                    (
 # 227 "Parser.fsy"
-                                           processExpression parseState (QuadSub) _1 (Some _3) 
+                                           processBinExpression parseState (QuadSub) _1 _3 
                    )
 # 227 "Parser.fsy"
                  :  expressionType ));
@@ -1180,7 +1180,7 @@ let _fsyacc_reductions ()  =    [|
                 (
                    (
 # 229 "Parser.fsy"
-                                          processExpression parseState (QuadAdd) _1 (Some _3) 
+                                          processBinExpression parseState (QuadAdd) _1 _3 
                    )
 # 229 "Parser.fsy"
                  :  expressionType ));
@@ -1192,7 +1192,7 @@ let _fsyacc_reductions ()  =    [|
                 (
                    (
 # 231 "Parser.fsy"
-                                           processExpression parseState (QuadMult) _1 (Some _3) 
+                                           processBinExpression parseState (QuadMult) _1 _3 
                    )
 # 231 "Parser.fsy"
                  :  expressionType ));
@@ -1204,7 +1204,7 @@ let _fsyacc_reductions ()  =    [|
                 (
                    (
 # 233 "Parser.fsy"
-                                           processExpression parseState (QuadDiv) _1 (Some _3) 
+                                           processBinExpression parseState (QuadDiv) _1 _3 
                    )
 # 233 "Parser.fsy"
                  :  expressionType ));
@@ -1216,7 +1216,7 @@ let _fsyacc_reductions ()  =    [|
                 (
                    (
 # 235 "Parser.fsy"
-                                          processExpression parseState (QuadMod) _1 (Some _3) 
+                                          processBinExpression parseState (QuadMod) _1 _3 
                    )
 # 235 "Parser.fsy"
                  :  expressionType ));

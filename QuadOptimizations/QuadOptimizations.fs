@@ -168,24 +168,19 @@ let inline simpleBackwardPropagation (unit:quadWithIndexType list) =
     simpleBackwardPropagationHelper [] unit
 
 open Block
-type intOpType = System.Int16->System.Int16->System.Int16
-type byteOpType = System.Byte->System.Byte->System.Byte
-type intCmpType = System.Int16->System.Int16->bool
-type byteCmpType = System.Byte->System.Byte->bool
+
 let constantFolding (block:blockWithIdType) =
     let byteHash = new Dictionary<entryWithTypeAndNesting,System.Byte>()
     let intHash = new Dictionary<entryWithTypeAndNesting,System.Int16>()
     let rec chooser (quads:quadWithIndexType list) acc =
-        let inline tryGetIntConstant (elem:quadElementType) = 
-            match elem with
+        let tryGetIntConstant = function
             |Entry e when intHash.ContainsKey(e) ->
                 Some intHash.[e]
             |Int i ->
                 Some i
             |_ -> 
                 None
-        let inline tryGetByteConstant (elem:quadElementType) = 
-            match elem with
+        let tryGetByteConstant = function
             |Entry e when byteHash.ContainsKey(e) ->
                 Some byteHash.[e]
             |Byte b ->
@@ -200,29 +195,26 @@ let constantFolding (block:blockWithIdType) =
             |QuadBinOperation(op,a,b,s) ->
                 match s.entryType with
                 | TYPE_int ->
+                    intHash.Remove(s) |> ignore
                     match tryGetIntConstant a, tryGetIntConstant b with
                     |Some c1,Some c2 ->
-                        if (op = OpDiv || op = OpMod) && c2 = 0s
-                        then 
-                            h::acc
-                        else 
-                            let result =
-                                (c1, c2) ||> 
-                                (match op with
-                                |OpAdd -> (+)
-                                |OpSub -> (-)
-                                |OpMult -> (*)
-                                |OpDiv -> (/)
-                                |OpMod  -> (%) )
-                            intHash.[s] <- result                    
-                            match s.entry.entry_info with
-                            |ENTRY_variable _ |ENTRY_parameter _ ->
-                                h.quad <- QuadAssign(Int result, Entry s)
-                                h :: acc
-                            |ENTRY_temporary _ ->
-                                acc
-                            | _ -> 
-                                failwith "wtf"
+                        let result =
+                            (c1, c2) ||> 
+                            (match op with
+                            |OpAdd -> (+)
+                            |OpSub -> (-)
+                            |OpMult -> (*)
+                            |OpDiv -> (/)
+                            |OpMod  -> (%) )
+                        intHash.[s] <- result                    
+                        match s.entry.entry_info with
+                        |ENTRY_variable _ |ENTRY_parameter _ ->
+                            h.quad <- QuadAssign(Int result, Entry s)
+                            h :: acc
+                        |ENTRY_temporary _ ->
+                            acc
+                        | _ -> 
+                            failwith "wtf"
                     |Some c, None ->
                         h.quad <- QuadBinOperation(op,Int c, b, s)
                         h :: acc
@@ -230,29 +222,28 @@ let constantFolding (block:blockWithIdType) =
                         h.quad <- QuadBinOperation(op,a, Int c, s)
                         h :: acc
                     |None, None ->
+                        if( op = OpAdd && a = b) then h.quad <- QuadBinOperation(op, a, Int 2s, s)
                         h ::acc
                 | TYPE_byte ->
+                    byteHash.Remove(s) |> ignore
                     match tryGetByteConstant a, tryGetByteConstant b with
                     |Some c1,Some c2 ->
-                        if (op = OpDiv || op = OpMod) && c2 = 0uy
-                        then 
-                            h::acc
-                        else 
-                            let result = (c1, c2) ||>  (match op with
-                                                        |OpAdd -> (+)
-                                                        |OpSub -> (-)
-                                                        |OpMult -> (*)
-                                                        |OpDiv -> (/)
-                                                        |OpMod  -> (%))
-                            byteHash.[s] <- result                    
-                            match s.entry.entry_info with
-                            |ENTRY_variable _ |ENTRY_parameter _ ->
-                                h.quad <- QuadAssign(Byte result, Entry s)
-                                h :: acc
-                            |ENTRY_temporary _ ->
-                                acc
-                            | _ -> 
-                                failwith "wtf"
+                        let result = 
+                           (match op with
+                            |OpAdd -> (+)
+                            |OpSub -> (-)
+                            |OpMult -> (*)
+                            |OpDiv -> (/)
+                            |OpMod  -> (%)) c1 c2
+                        byteHash.[s] <- result                    
+                        match s.entry.entry_info with
+                        |ENTRY_variable _ |ENTRY_parameter _ ->
+                            h.quad <- QuadAssign(Byte result, Entry s)
+                            h :: acc
+                        |ENTRY_temporary _ ->
+                            acc
+                        | _ -> 
+                            failwith "wtf"
                     |Some c, None ->
                         h.quad <- QuadBinOperation(op,Byte c, b, s)
                         h :: acc
@@ -260,6 +251,7 @@ let constantFolding (block:blockWithIdType) =
                         h.quad <- QuadBinOperation(op,a, Byte c, s)
                         h :: acc
                     |None, None ->
+                        if( op = OpAdd && a = b) then h.quad <- QuadBinOperation(op, a, Byte 2uy, s)
                         h ::acc
                 | _ -> failwith "wtf"
             |QuadComparison(comp,a,b,i1,i2) ->
@@ -286,7 +278,7 @@ let constantFolding (block:blockWithIdType) =
                         h.quad <- QuadComparison(comp, a, Int c, i1, i2)
                         h :: acc
                     |None, None ->
-                        h ::acc
+                        h :: acc
                 |TYPE_byte ->
                     match tryGetByteConstant a, tryGetByteConstant b with
                     |Some c1,Some c2 ->
@@ -318,20 +310,24 @@ let constantFolding (block:blockWithIdType) =
                 |None ->
                     ()
                 h :: acc
-            |QuadAssign (a,s) ->
+            |QuadAssign (a,Entry s) ->
                 match quadElementType.GetType a with
                 |TYPE_int ->
+                    intHash.Remove(s) |> ignore
                     match tryGetIntConstant a with
                     |Some c ->
-                        h.quad <- QuadAssign(Int c,s)
+                        h.quad <- QuadAssign(Int c,Entry s)
+                        intHash.Add(s, c) |> ignore
                     |None ->
                         ()
                 |TYPE_byte ->
+                    byteHash.Remove(s) |> ignore
                     match tryGetByteConstant a with
                     |Some c ->
-                        h.quad <- QuadAssign(Byte c,s)
+                        h.quad <- QuadAssign(Byte c,Entry s)
+                        byteHash.Add(s, c) |> ignore
                     |None ->
-                        ()
+                        ()                        
                 |_-> failwith "wtf"
                 h :: acc
             |QuadPar(e,m) ->
@@ -372,8 +368,8 @@ let shortenJumpPaths (unitList: blockWithIdType list) =
     let rec dfs node acc=
         let fstQuad =unitArray.[node].block.quads.Head
         match fstQuad.quad with
-        |QuadJump x ->
-            dfs blockNameHash.[!x] (x::acc)
+        |QuadJump ({contents=x} as xref) ->
+            dfs blockNameHash.[x] (xref::acc)
         |_ ->
             List.iter (fun l -> l:= fstQuad.index) acc
     List.iter (fun (block:blockWithIdType) -> 

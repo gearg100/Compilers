@@ -217,7 +217,7 @@ and _fslex_token  _fslex_state lexbuf =
           )
   | 2 -> ( 
 # 51 "Lexer.fsl"
-                           INT (Int32.Parse (lexeme lexbuf)) 
+                           INT (Int16.Parse (lexeme lexbuf)) 
 # 221 "obj\x86\Debug\Lexer.fs"
           )
   | 3 -> ( 

@@ -5,6 +5,10 @@ prog1 () : proc
    {
       b = 1+1+1+1+1;
       a = 15+2+2+b+2+2+1;
-      c = a + b;
+	  if (a<b) 
+	  {
+		c=1;
+	  }
+	  else c = a + b;
       writeInteger(c);
    }

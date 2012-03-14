@@ -1,27 +1,61 @@
 BlockName 0 , Id = 1
 Starts at @1 and ends at @1
-1:	unit , prog1, - , -
+1:	unit , swap, - , -
 
 BlockName 1 , Id = 2
-Starts at @2 and ends at @17
-2:	+    , 1, 1, $1
-3:	+    , $1, 1, $2
-4:	+    , $2, 1, $3
-5:	+    , $3, 1, $4
-6:	:=   , $4, - , b
-7:	+    , 15, 2, $5
-8:	+    , $5, 2, $6
-9:	+    , $6, b, $7
-10:	+    , $7, 2, $8
-11:	+    , $8, 2, $9
-12:	+    , $9, 1, $10
-13:	:=   , $10, - , a
-14:	+    , a, b, $11
-15:	:=   , $11, - , c
-16:	par  , c , V , -
-17:	call , - , - , writeInteger
+Starts at @2 and ends at @4
+2:	:=   , a, - , t
+3:	:=   , b, - , a
+4:	:=   , t, - , b
 
-BlockName 2 , Id = 18
-Starts at @18 and ends at @18
-18:	endu , prog1, - , -
+BlockName 2 , Id = 5
+Starts at @5 and ends at @5
+5:	endu , swap, - , -
+
+BlockName 0 , Id = 6
+Starts at @6 and ends at @6
+6:	unit , prog1, - , -
+
+BlockName 1 , Id = 7
+Starts at @7 and ends at @22
+7:	+    , 1, 1, $1
+8:	+    , $1, 1, $2
+9:	+    , $2, 1, $3
+10:	+    , $3, 1, $4
+11:	:=   , $4, - , b
+12:	+    , 15, 2, $5
+13:	+    , $5, 2, $6
+14:	+    , $6, b, $7
+15:	+    , $7, 2, $8
+16:	+    , $8, 2, $9
+17:	+    , $9, 1, $10
+18:	:=   , $10, - , a
+19:	par  , a , V , -
+20:	par  , b , V , -
+21:	call , - , - , swap
+22:	<    , a, b, (23, 27)
+
+BlockName 2 , Id = 23
+Starts at @23 and ends at @24
+23:	:=   , 1, - , c
+24:	<    , a, b, (25, 26)
+
+BlockName 3 , Id = 25
+Starts at @25 and ends at @26
+25:	:=   , 1, - , c
+26:	jump , - , - , 29
+
+BlockName 4 , Id = 27
+Starts at @27 and ends at @28
+27:	+    , a, b, $11
+28:	:=   , $11, - , c
+
+BlockName 5 , Id = 29
+Starts at @29 and ends at @30
+29:	par  , c , V , -
+30:	call , - , - , writeInteger
+
+BlockName 6 , Id = 31
+Starts at @31 and ends at @31
+31:	endu , prog1, - , -
 

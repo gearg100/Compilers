@@ -38,7 +38,7 @@ type token =
   | T_EOF
   | ID of (string)
   | STRING of (string list*string)
-  | INT of (int)
+  | INT of (int16)
   | BYTE of (byte)
 type tokenId = 
     | TOKEN_EQ
