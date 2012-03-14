@@ -10,6 +10,13 @@ type typ =
         match x, y with
         |TYPE_array (t1,i1),TYPE_array (t2,i2) when i1 = -1s || i2 = -1s -> t1=t2
         |_ -> x=y
+    override me.ToString() =
+        match me with
+        | TYPE_none -> "TYPE_none"
+        | TYPE_int -> "TYPE_int"
+        | TYPE_byte -> "TYPE_byte"
+        | TYPE_proc -> "TYPE_proc"
+        | TYPE_array(t,i) -> "TYPE_array(" + t.ToString() + ", " + i.ToString() + ")"
 
 let inline (==) x y = typ.CheckEqualTypes x y
 

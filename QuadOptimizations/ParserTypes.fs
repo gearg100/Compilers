@@ -29,9 +29,4 @@ let voidCondition  =
         False   = []
     }
 
-type parameterListnew = (expressionType*pass_mode) list
-type parameterList = 
-    {
-        mutable expressionList  : expressionType list;
-        mutable modeList        : pass_mode list
-    }
+type parameterList = (expressionType*pass_mode) list

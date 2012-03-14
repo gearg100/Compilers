@@ -1028,7 +1028,7 @@ let _fsyacc_reductions ()  =    [|
 # 1028 "obj\x86\Release\Parser.fs"
         (fun (parseState : Microsoft.FSharp.Text.Parsing.IParseState) ->
             let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : string)) in
-            let _3 = (let data = parseState.GetInput(3) in (Microsoft.FSharp.Core.Operators.unbox data :  parameterListnew )) in
+            let _3 = (let data = parseState.GetInput(3) in (Microsoft.FSharp.Core.Operators.unbox data :  parameterList )) in
             Microsoft.FSharp.Core.Operators.box
                 (
                    (
@@ -1047,7 +1047,7 @@ let _fsyacc_reductions ()  =    [|
                                              [_1,PASS_BY_VALUE] 
                    )
 # 203 "Parser.fsy"
-                 :  parameterListnew ));
+                 :  parameterList ));
 # 1051 "obj\x86\Release\Parser.fs"
         (fun (parseState : Microsoft.FSharp.Text.Parsing.IParseState) ->
             let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data :  expressionType )) in
@@ -1058,10 +1058,10 @@ let _fsyacc_reductions ()  =    [|
                                           [_1,PASS_BY_REFERENCE] 
                    )
 # 205 "Parser.fsy"
-                 :  parameterListnew ));
+                 :  parameterList ));
 # 1062 "obj\x86\Release\Parser.fs"
         (fun (parseState : Microsoft.FSharp.Text.Parsing.IParseState) ->
-            let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data :  parameterListnew )) in
+            let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data :  parameterList )) in
             let _3 = (let data = parseState.GetInput(3) in (Microsoft.FSharp.Core.Operators.unbox data :  expressionType )) in
             Microsoft.FSharp.Core.Operators.box
                 (
@@ -1070,10 +1070,10 @@ let _fsyacc_reductions ()  =    [|
                                                    (_3,PASS_BY_VALUE)::_1 
                    )
 # 207 "Parser.fsy"
-                 :  parameterListnew ));
+                 :  parameterList ));
 # 1074 "obj\x86\Release\Parser.fs"
         (fun (parseState : Microsoft.FSharp.Text.Parsing.IParseState) ->
-            let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data :  parameterListnew )) in
+            let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data :  parameterList )) in
             let _3 = (let data = parseState.GetInput(3) in (Microsoft.FSharp.Core.Operators.unbox data :  expressionType )) in
             Microsoft.FSharp.Core.Operators.box
                 (
@@ -1082,7 +1082,7 @@ let _fsyacc_reductions ()  =    [|
                                                       (_3,PASS_BY_REFERENCE)::_1 
                    )
 # 209 "Parser.fsy"
-                 :  parameterListnew ));
+                 :  parameterList ));
 # 1086 "obj\x86\Release\Parser.fs"
         (fun (parseState : Microsoft.FSharp.Text.Parsing.IParseState) ->
             let _1 = (let data = parseState.GetInput(1) in (Microsoft.FSharp.Core.Operators.unbox data : int16)) in

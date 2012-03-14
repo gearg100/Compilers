@@ -47,16 +47,19 @@ module Compiler=
             produceIntermediate ()
         with 
         | :? Error.Terminate -> 
-            printfn "Terminate"
+            eprintfn "Terminate"
             []
         | :? Symbol.Exit -> 
-            printfn "Exit" 
+            eprintfn "Exit" 
+            []
+        | :? System.NullReferenceException ->
+            eprintfn "Internal Error: Attempt to dereference null pointer"
             []
         | Failure s -> 
-            printfn "Syntax Error: Unrecognized Syntax Error.\nHint: Perhaps there are orphaned brackets or missing semicolons"
+            eprintfn "Syntax Error: Unrecognized Syntax Error.\nHint: Perhaps there are orphaned brackets or missing semicolons"
             []
         | ex->
-            printfn "Unhandled Exception: %s \n\n%A \n\n%A \n\n%A" ex.Message ex.Data ex.StackTrace ex.TargetSite
+            eprintfn "Unhandled Exception: %s \n\n%A \n\n%A \n\n%A %A %A" ex.Message ex.Data ex.StackTrace ex.TargetSite ex.InnerException ex
             []
 
     let optimizer rawIntermediate =

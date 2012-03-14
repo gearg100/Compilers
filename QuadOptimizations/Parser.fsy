@@ -46,7 +46,7 @@ List.iter bulkLoad LibraryFunctions
 %type < quadType list > stmt_list
 %type < quadType list > compound_stmt
 %type < expressionType > func_call
-%type < parameterListnew > expr_list
+%type < parameterList > expr_list
 %type < expressionType > expr
 %type < expressionType > l_value
 %type < conditionType > cond

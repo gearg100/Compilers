@@ -104,7 +104,7 @@ let inline checkReturnSemantics (state:IParseState) typ  =
 let inline processAssignment (state:IParseState) (l:expressionType) (e:expressionType) =
     let t1 = (l.Place |> quadElementType.GetType)
     let t2 = (e.Place |> quadElementType.GetType)
-    if (checkStmtSemantics state t1 t2 "Semantic Error at %A - %A: Type Mismatch1\n")
+    if (checkStmtSemantics state t1 t2 ("Semantic Error at %A - %A: Type Mismatch: " +  t1.ToString() + " <> " + t2.ToString() + "\n"))
     then 
         match l.Place with
         |Entry ent |Valof ent ->
@@ -181,10 +181,10 @@ let inline checkParameters flag e p =
     |(t1,p1),(t2,p2) when t1==t2 && (if p1=PASS_BY_REFERENCE then (p1=p2) else true)->flag
     |_ ->false  
 
-let inline processFunctionCall (state:IParseState) id (paramList:parameterListnew) =
+let inline processFunctionCall (state:IParseState) id (paramList:parameterList) =
     let p,e = FindPosAndEntry state id
     let paramSet = new System.Collections.Generic.HashSet<entryWithTypeAndNesting>()
-    let inline CheckAndCreateParameterCode (actualParList:parameterListnew) (parList:entry list) resultType func=
+    let inline CheckAndCreateParameterCode (actualParList:parameterList) (parList:entry list) resultType func=
         let rec createParameterCodeHelper actual expected acc =
             match actual, expected with 
             |[],[] ->
@@ -214,7 +214,7 @@ let inline processFunctionCall (state:IParseState) id (paramList:parameterListne
         |Some code ->
             func code
         |None ->
-            let inline getActualTypeAndMode (parList:parameterListnew) resultType =
+            let inline getActualTypeAndMode (parList:parameterList) resultType =
                 let rec getActualTypeAndModeHelper rest acc=
                     match rest with
                     |[] -> 
@@ -240,7 +240,7 @@ let inline processFunctionCall (state:IParseState) id (paramList:parameterListne
                     error "Semantic Error at %A: Parameter Mismatch at function %s:\n\t Expected Parameter List=%A \n\t Given empty Parameter List\n" p id exp
                 else
                     error "Semantic Error at %A: Parameter Mismatch at function %s:\n\t Expected Parameter List = %A \n\t Actual Parameter List = %A\n" p id exp act
-                printf "ERROR"; voidExpression
+                voidExpression
             let actualTypeAndMode = 
                 getActualTypeAndMode paramList resultType
             let expectedTypeAndMode = 
@@ -271,13 +271,15 @@ let inline processFunctionCall (state:IParseState) id (paramList:parameterListne
                             Code = QuadCall(fn,paramSet)::QuadPar ( Entry(tmp) , RET)::code
                             Place = Entry(tmp)
                         })
-            |_ -> error "Semantic Error at %A: wtf\n" p
+            |_ -> 
+                error "Semantic Error at %A: wtf\n" p
+                voidExpression
         |_ ->
              error "Semantic Error at %A: Given name is not a Function\n" p
-             printf "ERROR"; voidExpression
+             voidExpression
     |None -> 
         error "undeclared Identifier"
-        printf "ERROR"; voidExpression 
+        voidExpression
 
 //LValue
 let inline getVariableOrParameterType (entry:entry) p=
@@ -288,6 +290,7 @@ let inline getVariableOrParameterType (entry:entry) p=
         p.parameter_type
     |_ ->
         error "Semantic Error at %A: The give name is neither a variable nor a parameter name\n" p 
+        TYPE_none
 
 let inline processLValue1 (state:IParseState) id = 
     let p,e = FindPosAndEntry state id
@@ -299,8 +302,8 @@ let inline processLValue1 (state:IParseState) id =
             Place = Entry(e)
         }
     |None ->
-        error "undeclared variable" |> ignore;
-        printf "ERROR"; voidExpression
+        error "undeclared variable"
+        voidExpression
 
 let inline processLValue2 (state:IParseState) id =
     let p,e = FindPosAndEntry state id
@@ -315,10 +318,10 @@ let inline processLValue2 (state:IParseState) id =
             }
         |_ ->
             error "Semantic Error at %A: type mismatch: LValue neither Int nor Byte\n" p
-            printf "ERROR"; voidExpression
+            voidExpression
     |None ->
-        error "undeclared variable" |>ignore
-        printf "ERROR"; voidExpression
+        error "undeclared variable"
+        voidExpression
 
 let inline processLValue3 (state:IParseState) id (index : expressionType)=
     let p,e = FindPosAndEntry state id
@@ -334,15 +337,15 @@ let inline processLValue3 (state:IParseState) id (index : expressionType)=
                 Code = (QuadArray(ar, index.Place, tmp) :: index.Code)
                 Place = Valof(tmp)
             }
-        |TYPE_array _ as arrayType->
-            error "Semantic Error at %A: type mismatch: Invalid Array Index type = %A\n" p arrayType
-            printf "ERROR"; voidExpression
+        |TYPE_array (typ,_)->
+            error "Semantic Error at %A: type mismatch: Invalid Array Index type: %A\n" p typ
+            voidExpression
         |_ ->
             error "Semantic Error at %A: type mismatch: not an Array\n" p 
-            printf "ERROR"; voidExpression
+            voidExpression
     |None -> 
-        error "Semantic Error at %A: undeclared Array\n" p 
-        printf "ERROR"; voidExpression
+        error "Semantic Error at %A: undeclared Array\n" p
+        voidExpression
 
 //Expressions
 let inline checkExprSemantics op x1 x2 (state:IParseState) txt =
@@ -355,12 +358,12 @@ let inline checkExprSemantics op x1 x2 (state:IParseState) txt =
         false
 
 let inline processLValueExpression (state:IParseState) (l:expressionType) =
-    l
+    if l.Place = QNone then voidExpression else l
 
 let inline processFunctionCallExpression (state:IParseState) f =
     let t = (f.Place |> quadElementType.GetType)
     if (checkExprSemantics (<>) t TYPE_proc state "Semantic Error at %A -%A: void Function call\n") 
-    then f else printf "ERROR"; voidExpression
+    then f else voidExpression
 
 let inline processUnExpression (state:IParseState) (op:unOpType) (e:expressionType) =
     let typ = (e.Place |> quadElementType.GetType)
@@ -373,12 +376,12 @@ let inline processUnExpression (state:IParseState) (op:unOpType) (e:expressionTy
             Place = Entry(tmp)
         }
     else
-        printf "ERROR"; voidExpression
+        voidExpression
 
 let inline processBinExpression (state:IParseState) (op:binOpType) (e1:expressionType) (e2:expressionType) =
     let t1 = (e1.Place |> quadElementType.GetType)
     let t2 = (e2.Place |> quadElementType.GetType)
-    if (checkExprSemantics (=) t2 t1 state "Semantic Error at %A - %A: Type Mismatch3\n") 
+    if (checkExprSemantics (=) t2 t1 state ("Semantic Error at %A - %A: Type Mismatch: " +  t1.ToString() + " <> " + t2.ToString() + "\n")) 
     then 
         let temp = newTemporary t1
         let tmp = { entry = temp; entryType = t1; usageNest = getScopeNesting () }
@@ -387,12 +390,14 @@ let inline processBinExpression (state:IParseState) (op:binOpType) (e1:expressio
             Place = Entry(tmp)
         }
     else
-        printf "ERROR"; voidExpression
+        voidExpression
 
 //Conditions
 let inline processComparison (state:IParseState) (op:compType) (e1:expressionType) (e2:expressionType)=
+    let t1 = (e1.Place |> quadElementType.GetType)
+    let t2 = (e2.Place |> quadElementType.GetType)
     if (checkCondSemantics (e1.Place |> quadElementType.GetType) (e2.Place |> quadElementType.GetType) 
-            state "Semantic Error at %A - %A: Type Mismatch4\n")
+            state ("Semantic Error at %A - %A: Type Mismatch: " +  t1.ToString() + " <> " + t2.ToString() + "\n"))
     then
         let True, False = ref 1, ref 1
         {
