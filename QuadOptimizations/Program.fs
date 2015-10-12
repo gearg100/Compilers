@@ -2,7 +2,7 @@
 
 open System
 open System.IO
-open Microsoft.FSharp.Text
+open ExtCore.Args
 open Microsoft.FSharp.Text.Lexing
 
 open Lexer
@@ -102,14 +102,14 @@ let main () =
     let debugFlags = [|"Blocks";"SimpleOpts";"ControlGraph";"SimpleOpts+ControlGraph";"SimplifyBlocks"|]
     let debugMode = ref "" 
     let specs =
-        [
+        [|
             "-o", ArgType.String (fun s -> outputFileCandidate := s), "Name of the output"
             "-O", ArgType.Set optimizeFlag, "Enable Optimizations"
             "-i", ArgType.Clear produceFinal, "Emits intermediate code"
             "-f", ArgType.Set produceFinal, "Emits final code"
             "--debug", ArgType.String (fun s -> debugMode := s ), "Emits basic blocks, simply optimized blocks or control graph nodes"
-        ]
-        |> List.map (fun (sh, ty, desc) -> ArgInfo(sh, ty, desc))
+        |]
+        |> Array.map (fun (sh, ty, desc) -> ArgInfo.Create(sh, ty, desc))
     do ArgParser.Parse(specs, (fun infile -> inputFileCandidate := infile)) 
     try
         if !inputFileCandidate = "" then failwith "Unspecified Input File"

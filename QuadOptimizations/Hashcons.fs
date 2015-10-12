@@ -12,18 +12,18 @@ let hash_tag x = x.tag
 
 type Make<'a> (X: IEqualityComparer<'a>)=
     member me.f () =
-        let gen_tag = ref 0
+        let mutable gen_tag = 0
         let table : hash_consed<'a> list array = Array.create 397 []
         fun x ->
             let i = abs((X.GetHashCode x) % table.Length)
             let rec look_and_add = function
             | [] ->
                 let hv = {
-                            tag = !gen_tag
+                            tag = gen_tag
                             node = x
                             }
                 table.[i] <- hv :: table.[i]
-                incr gen_tag
+                gen_tag <- gen_tag + 1
                 hv
             | hd::tl ->
                 if X.Equals (hd.node,x) then
@@ -32,11 +32,11 @@ type Make<'a> (X: IEqualityComparer<'a>)=
                     look_and_add tl
             look_and_add table.[i]
 
-let hashcons_resets = ref []
-let init () = List.iter (fun f -> f()) !hashcons_resets
+let mutable hashcons_resets = []
+let init () = List.iter (fun f -> f()) hashcons_resets
 
 let register_hcons h u =
-    let hf = ref (h u)
-    let reset () = hf := h u
-    hashcons_resets := (reset :: !hashcons_resets)
-    (function x -> !hf x)
+    let mutable hf = (h u)
+    let reset () = hf <- h u
+    hashcons_resets <- (reset :: hashcons_resets)
+    (function x -> hf x)

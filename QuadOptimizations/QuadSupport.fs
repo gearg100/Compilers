@@ -6,7 +6,7 @@ open Error
 open Identifier
 open System.Collections.Generic
 
-let toString x y =System.String.Format(x,y) 
+let toString x y = System.String.Format(x,y) 
 
 type quadElementType =
     |QNone

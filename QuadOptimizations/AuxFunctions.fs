@@ -12,14 +12,14 @@ open Microsoft.FSharp.Text.Parsing
 #nowarn "25"
 let inline lexeme () = LexBuffer<char>.LexemeString
 let inline FindPosition (state:IParseState) = (state.InputStartPosition(1).Line,state.InputStartPosition(1).Column)
-let inline getScopeFunction () = (!currentScope).sco_function.Value
+let inline getScopeFunction () = currentScope.sco_function.Value
 let inline setScopeFunctionsByteMutationFlag () = 
     let (ENTRY_function finfo) = getScopeFunction().entry_info
     finfo.function_mutatesForeignBytes <- true
 let inline setScopeFunctionsIntMutationFlag () = 
     let (ENTRY_function finfo) = getScopeFunction().entry_info
     finfo.function_mutatesForeignInts <- true
-let inline getScopeNesting () = (!currentScope).sco_nesting
+let inline getScopeNesting () = currentScope.sco_nesting
 let inline getEntryType e = entry.GetType e
 let inline getReturnType f =
     match f.entry_info with
@@ -154,7 +154,7 @@ let inline processReturnExpressionStmt (state:IParseState) (expression:expressio
         match (lookupEntry (id_make "$$") LOOKUP_CURRENT_SCOPE true) with
         |Some ent ->
             let e = { entry = ent; entryType = getEntryType ent; usageNest = getScopeNesting () }
-            (QuadRet (!currentScope).sco_function.Value)::QuadAssign(expression.Place,Entry e)::expression.Code
+            (QuadRet currentScope.sco_function.Value)::QuadAssign(expression.Place,Entry e)::expression.Code
         |None ->
             []
     else
@@ -163,7 +163,7 @@ let inline processReturnExpressionStmt (state:IParseState) (expression:expressio
 let inline processReturnStmt (state:IParseState) =
     if (checkReturnSemantics state TYPE_proc)
     then
-        [QuadRet (!currentScope).sco_function.Value]
+        [QuadRet currentScope.sco_function.Value]
     else
         []
 

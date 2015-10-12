@@ -67,9 +67,9 @@ module Block =
     let blockNameHash = new Dictionary<int,int>()
 
     let inline makeBasicBlocksOfUnit (unit:quadWithIndexType list) =
-        let blockCounter = ref -1
+        let mutable blockCounter = -1
         let inline makeBlock (code:quadWithIndexType list) =
-            incr blockCounter
+            blockCounter <- blockCounter + 1
             let _end = code.Head.index
             let _code = List.rev code
             let _start = _code.Head.index
@@ -79,9 +79,9 @@ module Block =
                     endingIndex = _end
                     quads = _code
                 }
-            blockNameHash.[_start] <- !blockCounter
+            blockNameHash.[_start] <- blockCounter
             {
-                name = !blockCounter 
+                name = blockCounter 
                 id = _start
                 block = _block
             }
@@ -327,7 +327,7 @@ let constantFolding (block:blockWithIdType) =
                         h.quad <- QuadAssign(Byte c,Entry s)
                         byteHash.Add(s, c) |> ignore
                     |None ->
-                        ()                        
+                        ()               
                 |_-> failwith "wtf"
                 h :: acc
             |QuadPar(e,m) ->
@@ -363,7 +363,7 @@ let constantFolding (block:blockWithIdType) =
     block.block.quads <- chooser block.block.quads []
     block
 
-let shortenJumpPaths (unitList: blockWithIdType list) =    
+let shortenJumpPaths (unitList: blockWithIdType list) =
     let unitArray = List.toArray unitList
     let rec dfs node acc=
         let fstQuad =unitArray.[node].block.quads.Head

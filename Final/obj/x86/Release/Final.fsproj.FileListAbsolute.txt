@@ -1,8 +1,0 @@
-C:\Users\skull\Desktop\Compilers2011\Final\bin\Release\Language.XML
-C:\Users\skull\Desktop\Compilers2011\Final\obj\x86\Release\ResolveAssemblyReference.cache
-C:\Users\skull\Desktop\Compilers2011\Final\obj\x86\Release\Lexer.fs
-C:\Users\skull\Desktop\Compilers2011\Final\obj\x86\Release\Parser.fs
-C:\Users\skull\Desktop\Compilers2011\Final\bin\Release\Language.exe
-C:\Users\skull\Desktop\Compilers2011\Final\bin\Release\Language.pdb
-C:\Users\skull\Desktop\Compilers2011\Final\obj\x86\Release\Language.exe
-C:\Users\skull\Desktop\Compilers2011\Final\obj\x86\Release\Language.pdb

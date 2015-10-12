@@ -122,47 +122,47 @@ let no_entry id =
         entry_info  = ENTRY_none
     }
 
-let currentScope = ref the_outer_scope
-let quadNext     = ref 1
-let tempNumber   = ref 1 
+let mutable currentScope = the_outer_scope
+let mutable quadNext     = 1
+let mutable tempNumber   = 1 
 let name =
-    let counter= ref 0
+    let mutable counter= 0
     fun nameMode (p:id)->
         if nameMode then 
-            let name = sprintf "%s_%d" (id_name p) !counter
-            incr counter
+            let name = sprintf "%s_%d" (id_name p) counter
+            counter <- counter + 1
             name
         else
             let name = sprintf "%s" (id_name p)
             name
 
-let tab = ref (new HashMultiMap<id,entry> (0,HashIdentity.Structural))
+let mutable tab = HashMultiMap<id,entry> (0,HashIdentity.Structural)
 
 let initSymbolTable (size:int) =
-    tab := new HashMultiMap<id,entry> (size,HashIdentity.Structural)
-    currentScope := the_outer_scope
+    tab <- HashMultiMap<id,entry> (size,HashIdentity.Structural)
+    currentScope <- the_outer_scope
 
 let openScope f =
     let sco = 
         {
-            sco_parent   = Some !currentScope
-            sco_nesting  = if (!currentScope).sco_nesting=System.Int32.MaxValue then 1 else (!currentScope).sco_nesting + 1
+            sco_parent   = Some currentScope
+            sco_nesting  = if currentScope.sco_nesting=System.Int32.MaxValue then 1 else currentScope.sco_nesting + 1
             sco_function = f
             sco_entries  = []
             sco_negofs   = start_negative_offset
         }
-    currentScope := sco
+    currentScope <- sco
 
 let closeScope () =
-    let sco = !currentScope
-    let manyentry (e:entry) = (!tab).Remove e.entry_id
+    let sco = currentScope
+    let manyentry (e:entry) = tab.Remove e.entry_id
     List.iter manyentry sco.sco_entries
     match sco.sco_parent with
     | Some scp ->
         match sco.sco_function.Value.entry_info with
         |ENTRY_function f ->f.function_negoffs <- -sco.sco_negofs
         | _ -> internal_error (__SOURCE_FILE__,__LINE__) "not a function!\n"
-        currentScope := scp
+        currentScope <- scp
     | None ->
         internal_error (__SOURCE_FILE__,__LINE__) "cannot close the outer scope! \n"
 exception Failure_NewEntry of entry
@@ -170,26 +170,26 @@ exception Exit
 let newEntry (id:id) inf err =
     try
         if err then
-            match (!tab).TryFind id with
-            |Some e -> if (e.entry_scope.sco_nesting = (!currentScope).sco_nesting) then
+            match tab.TryFind id with
+            |Some e -> if (e.entry_scope.sco_nesting = currentScope.sco_nesting) then
                         raise (Failure_NewEntry e)
             |None -> ()
         let e = {
                     entry_id    = id
-                    entry_scope = !currentScope
+                    entry_scope = currentScope
                     entry_info  = inf
                 } 
-        (!tab).Add (id, e)
-        (!currentScope).sco_entries <- e :: (!currentScope).sco_entries
+        tab.Add (id, e)
+        currentScope.sco_entries <- e :: currentScope.sco_entries
         e
     with Failure_NewEntry e ->
         error "duplicate identifier %a \n" pretty_id id
         e
 
 let lookupEntry id how err =
-    let scc = !currentScope
+    let scc = currentScope
     let lookup () =
-        match how, (!tab).TryFind id with
+        match how, tab.TryFind id with
         | LOOKUP_CURRENT_SCOPE, Some e when e.entry_scope.sco_nesting <> scc.sco_nesting -> None
         | _, x -> x
     if err then
@@ -198,17 +198,17 @@ let lookupEntry id how err =
         | None ->
             error "unknown identifier %a (first occurrence) \n" pretty_id id
             (* put it in, so we don't see more errors *)
-            (!tab).Add (id, (no_entry id))
+            tab.Add (id, (no_entry id))
             raise Exit
     else
         lookup()
 
 let newVariable id typ err =
-    (!currentScope).sco_negofs <- (!currentScope).sco_negofs - (sizeOfType typ|> int)
+    currentScope.sco_negofs <- currentScope.sco_negofs - (sizeOfType typ|> int)
     let inf = {
                 variable_type   = typ
-                variable_offset = (!currentScope).sco_negofs
-            }
+                variable_offset = currentScope.sco_negofs
+              }
     newEntry id (ENTRY_variable inf) err
 
 let newFunction id err nameMode=
@@ -267,7 +267,7 @@ let newParameter id typ mode f err =
                     elif p.entry_id <> id then
                         error "Parameter name mismatch in redeclaration of function %a \n" pretty_id f.entry_id
                     else
-                    (!tab).Add (id, p)
+                    tab.Add (id, p)
                     p
                 | _ ->
                     internal_error (__SOURCE_FILE__,__LINE__) "I found a parameter that is not a parameter! \n"
@@ -283,14 +283,14 @@ let newParameter id typ mode f err =
         raise Exit
 
 let newTemporary typ =
-    let id = id_make ("$" + (!tempNumber).ToString())
-    (!currentScope).sco_negofs <- (!currentScope).sco_negofs - (sizeOfType typ |>int)
+    let id = id_make ("$" + tempNumber.ToString())
+    currentScope.sco_negofs <- currentScope.sco_negofs - (sizeOfType typ |>int)
     let inf = 
         {
             temporary_type = typ
-            temporary_offset = (!currentScope).sco_negofs
+            temporary_offset = currentScope.sco_negofs
         }
-    incr tempNumber
+    tempNumber <- tempNumber + 1
     newEntry id (ENTRY_temporary inf) false
 
 let forwardFunction e =
@@ -308,27 +308,27 @@ let endFunctionHeader e typ =
             internal_error (__SOURCE_FILE__,__LINE__) "Cannot end parameters in an already defined function \n"
         | PARDEF_DEFINE ->
             inf.function_result <- typ
-            let offset =
+            let mutable offset =
                 if typ = TYPE_proc 
                 then
-                    ref start_positive_offset
+                    start_positive_offset
                 else 
                     newParameter (id_make "$$") typ RET e true |> ignore
-                    ref (start_positive_offset - 2)
+                    start_positive_offset - 2
             let fix_offset e =
                 match e.entry_info with
                 | ENTRY_parameter inf ->
-                    inf.parameter_offset <- !offset
+                    inf.parameter_offset <- offset
                     let size =
                         match inf.parameter_mode with
                         | PASS_BY_VALUE -> sizeOfType inf.parameter_type
                         | PASS_BY_REFERENCE|RET -> 2s                
-                    offset := !offset + (size |>int)
+                    offset <- offset + (size |>int)
                 | _ ->
                     internal_error (__SOURCE_FILE__,__LINE__) "Cannot fix offset to a non parameter \n"
             List.iter fix_offset inf.function_paramlist
             inf.function_paramlist <- inf.function_paramlist
-            inf.function_posoffs <- !offset - start_positive_offset
+            inf.function_posoffs <- offset - start_positive_offset
         | PARDEF_CHECK ->
             if inf.function_redeflist <> [] then
                 error "Fewer parameters than expected in redeclaration of function %a \n" pretty_id e.entry_id

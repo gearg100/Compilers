@@ -1,6 +1,6 @@
 ﻿namespace BonusPack
 open System.IO
-open Microsoft.FSharp.Text.Lexing
+open Microsoft.FSharp.Text
 open Microsoft.FSharp.Core.Printf
 module Error=
     exception Terminate

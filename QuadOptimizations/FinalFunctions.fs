@@ -7,13 +7,13 @@ open Error
 open Symbol
 
 let stringRegistry = new Dictionary<string,string list*string> ()
-let cnt=ref 1
+let mutable cnt = 1
 let inline addString (lst,s) =
     if (stringRegistry.ContainsKey s) then
         stringRegistry.[s] |> snd
     else
-        let str = "@str_"+ (string !cnt)
-        stringRegistry.[s] <- (lst,str); incr cnt
+        let str = "@str_"+ (string cnt)
+        stringRegistry.[s] <- (lst,str); cnt <- cnt + 1
         str
 
 let labelRegistry = new HashSet<int> ()

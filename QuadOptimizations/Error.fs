@@ -1,6 +1,6 @@
 ﻿module Error
 open System.IO
-open Microsoft.FSharp.Text.Lexing
+open Microsoft.FSharp.Text
 open Microsoft.FSharp.Core.Printf
 
 exception Terminate
