@@ -95,38 +95,38 @@ module Compiler=
         //|> (fun x -> printfn "%A" x; x) 
 
 let main () =
-    let inputFileCandidate = ref ""
-    let outputFileCandidate = ref ""
+    let mutable inputFileCandidate = ""
+    let mutable outputFileCandidate = ""
     let produceFinal = ref true
     let optimizeFlag = ref false
     let debugFlags = [|"Blocks";"SimpleOpts";"ControlGraph";"SimpleOpts+ControlGraph";"SimplifyBlocks"|]
-    let debugMode = ref "" 
+    let mutable debugMode = "" 
     let specs =
         [|
-            "-o", ArgType.String (fun s -> outputFileCandidate := s), "Name of the output"
+            "-o", ArgType.String (fun s -> outputFileCandidate <- s), "Name of the output"
             "-O", ArgType.Set optimizeFlag, "Enable Optimizations"
             "-i", ArgType.Clear produceFinal, "Emits intermediate code"
             "-f", ArgType.Set produceFinal, "Emits final code"
-            "--debug", ArgType.String (fun s -> debugMode := s ), "Emits basic blocks, simply optimized blocks or control graph nodes"
+            "--debug", ArgType.String (fun s -> debugMode <- s ), "Emits basic blocks, simply optimized blocks or control graph nodes"
         |]
         |> Array.map (fun (sh, ty, desc) -> ArgInfo.Create(sh, ty, desc))
-    do ArgParser.Parse(specs, (fun infile -> inputFileCandidate := infile)) 
+    do ArgParser.Parse(specs, (fun infile -> inputFileCandidate <- infile)) 
     try
-        if !inputFileCandidate = "" then failwith "Unspecified Input File"
-        elif not <| File.Exists !inputFileCandidate then failwithf "Specified Input File \"%s\" does not exist" !inputFileCandidate
-        if !debugMode <> "" && not <| Array.exists ((=) !debugMode) debugFlags then failwithf "Specified Debug Flag \"%s\" does not exist" !debugMode
+        if inputFileCandidate = "" then failwith "Unspecified Input File"
+        elif not <| File.Exists inputFileCandidate then failwithf "Specified Input File \"%s\" does not exist" inputFileCandidate
+        if debugMode <> "" && not <| Array.exists ((=) debugMode) debugFlags then failwithf "Specified Debug Flag \"%s\" does not exist" debugMode
         let inputFile = 
-            !inputFileCandidate
+            inputFileCandidate
         let outputFile =
-            if !outputFileCandidate <> "" then !outputFileCandidate
-            elif !debugMode <> "" then Path.GetFileNameWithoutExtension(inputFile) + "." + (!debugMode).ToLower()
+            if outputFileCandidate <> "" then outputFileCandidate
+            elif debugMode <> "" then Path.GetFileNameWithoutExtension(inputFile) + "." + debugMode.ToLower()
             elif not !produceFinal then Path.GetFileNameWithoutExtension(inputFile) + ".quads"
             else (Path.GetFileNameWithoutExtension inputFile) + ".asm"
         do Compiler.Initialize inputFile outputFile
         let intermediate = Compiler.frontend ()
         if intermediate <> [] then
-            intermediate |> if !debugMode <> "" 
-                            then List.iter (match !debugMode with
+            intermediate |> if debugMode <> "" 
+                            then List.iter (match debugMode with
                                             |"SimpleOpts" ->
                                                 simpleBackwardPropagation >> Block.makeBasicBlocksOfUnit >> List.map (constantFolding) >> Compiler.printBlocks >> Compiler.printResult
                                             |"Blocks" ->

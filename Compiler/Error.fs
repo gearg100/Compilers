@@ -7,13 +7,13 @@ exception Terminate
 
 type verbose = Vquiet | Vnormal | Vverbose
 
-let flagVerbose = ref Vnormal
+let mutable flagVerbose = Vnormal
 
-let numErrors = ref 0
-let maxErrors = ref 10
-let flagWarnings = ref true
-let numWarnings = ref 0
-let maxWarnings = ref 200
+let mutable numErrors = 0
+let maxErrors = 10
+let mutable flagWarnings = true
+let mutable numWarnings = 0
+let maxWarnings = 200
 
 type position =
     | PosPoint of Lexing.Position
@@ -52,21 +52,21 @@ let null_formatter = TextWriter.Null
 
 let internal_error (fname, lnum) fmt =
     let fmt = TextWriterFormat<'T,unit>(fmt)
-    incr numErrors
+    numErrors <- numErrors + 1
     let inline cont ppf = raise Terminate
     eprintf "Internal error occurred at %s:%s, " fname lnum
     kfprintf cont stderr fmt
 
 let fatal fmt =
     let fmt = TextWriterFormat<'T,unit>("Fatal error: " + fmt)
-    incr numErrors
+    numErrors <- numErrors + 1
     let inline cont ppf = raise Terminate
     kfprintf cont stderr fmt
 
 let error fmt =
     let fmt = TextWriterFormat<'T,unit>("Error: " + fmt)
-    incr numErrors
-    if !numErrors >= !maxErrors then
+    numErrors <- numErrors + 1
+    if numErrors >= maxErrors then
         let inline cont ppf =  
             eprintf "Too many errors, aborting...\n"
             raise Terminate
@@ -76,12 +76,12 @@ let error fmt =
 
 let warning fmt =
     let fmt = TextWriterFormat<'T,unit>("Warning: " + fmt)
-    if !flagWarnings then
-        incr numWarnings
-        if !numWarnings >= !maxWarnings then
+    if flagWarnings then
+        numWarnings <- numWarnings + 1
+        if numWarnings >= maxWarnings then
             let inline cont ppf =  
                 eprintf "Too many warnings, no more will be shown...\n"
-                flagWarnings := false
+                flagWarnings <- false
             kfprintf cont stderr fmt
         else
             eprintf fmt

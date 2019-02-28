@@ -1,0 +1,45 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>netcoreapp3.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="Types.fs" />
+    <Compile Include="Hashcons.fs" />
+    <Compile Include="Identifier.fs" />
+    <Compile Include="Error.fs" />
+    <Compile Include="Symbol.fs" />
+    <Compile Include="QuadSupport.fs" />
+    <Compile Include="ParserTypes.fs" />
+    <Compile Include="AuxFunctions.fs" />
+    <Compile Include="Parser.fs">
+      <Visible>false</Visible>
+      <Link>Parser.fs</Link>
+    </Compile>
+    <Compile Include="Lexer.fs">
+      <Visible>false</Visible>
+      <Link>Lexer.fs</Link>
+    </Compile>
+    <FsYacc Include="Parser.fsy">
+      <OtherFlags>--module Parser</OtherFlags>
+    </FsYacc>
+    <FsLex Include="Lexer.fsl">
+      <OtherFlags>--unicode</OtherFlags>
+    </FsLex>
+    <Compile Include="FinalSupport.fs" />
+    <Compile Include="FinalFunctions.fs" />
+    <Compile Include="QuadOptimizations.fs" />
+    <Compile Include="Program.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="ExtCore" Version="0.8.46" />
+    <PackageReference Include="FsLexYacc" Version="7.0.6" />
+    <PackageReference Include="FSPowerPack.Core.Community" Version="3.0.0" />
+  </ItemGroup>
+
+
+  <Import Project="C:\Users\gpsar\Documents\GitHub\Compilers\packages\FsLexYacc.7.0.6\build\FsLexYacc.targets" />
+</Project>

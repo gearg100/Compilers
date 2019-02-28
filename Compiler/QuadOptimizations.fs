@@ -10,13 +10,13 @@ module UnitList =
     let inline map f (unitList: 'a list list) =
         List.map (List.map f) unitList
     let inline mapi initValue f (unitList: 'a list list) =
-        let i = ref (initValue-1)
-        List.map (List.map (fun quad -> incr i; f !i quad)) unitList
+        let mutable i = initValue-1
+        List.map (List.map (fun quad -> i <- i + 1; f i quad)) unitList
     let inline iter f (unitList: 'a list list) =
         List.iter (List.iter f) unitList
     let inline iteri initValue f (unitList: 'a list list) =
-        let i = ref (initValue-1)
-        List.iter (List.iter (fun quad -> incr i; f !i quad)) unitList
+        let mutable i = initValue-1
+        List.iter (List.iter (fun quad -> i <- i + 1; f i quad)) unitList
     let inline flatten f (unitList: 'a list) =
         let rec flattenHelper nodeList currentNode acc =
             match currentNode with

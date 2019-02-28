@@ -1,0 +1,21 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="Types.fs" />
+    <Compile Include="Hashcons.fs" />
+    <Compile Include="Identifier.fs" />
+    <Compile Include="Error.fs" />
+    <Compile Include="Symbol.fs" />
+    <Compile Include="Symbtest.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="FsLexYacc" Version="7.0.6" />
+    <PackageReference Include="FSPowerPack.Core.Community" Version="3.0.0" />
+  </ItemGroup>
+
+</Project>
